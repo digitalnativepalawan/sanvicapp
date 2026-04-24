@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Phone, MessageCircle, Star, ChevronRight } from "lucide-react";
+import { Phone, MessageCircle, Star } from "lucide-react";
 import { pickStockImage } from "@/lib/stockImages";
 
 export interface Business {
@@ -18,6 +17,7 @@ interface Props {
   business: Business;
   priority?: boolean;
   featured?: boolean;
+  onOpen?: (b: Business) => void;
 }
 
 const buildWhatsAppLink = (raw: string, name: string) => {
@@ -39,20 +39,19 @@ const variantFor = (id: string) => {
   return { zoom, brightness, contrast, saturate, position };
 };
 
-export const FeedItem = ({ business, priority, featured }: Props) => {
-  const [expanded, setExpanded] = useState(false);
+export const FeedItem = ({ business, priority, featured, onOpen }: Props) => {
   const img = business.cover_image || pickStockImage(business.category, business.id);
   const v = variantFor(business.id);
 
   const baseH = featured ? "h-[78vh]" : "h-[58vh]";
-  const expandedH = featured ? "h-[90vh]" : "h-[68vh]";
+
+  const tagLower = (business.tag || "").toLowerCase();
+  const price = /budget|cheap/.test(tagLower) ? "₱" : /popular|featured|premium/.test(tagLower) ? "₱₱₱" : "₱₱";
 
   return (
     <article
-      onClick={() => setExpanded((v) => !v)}
-      className={`relative w-full overflow-hidden cursor-pointer transition-[height] duration-500 ease-out ${
-        expanded ? expandedH : baseH
-      }`}
+      onClick={() => onOpen?.(business)}
+      className={`relative w-full overflow-hidden cursor-pointer active:scale-[0.995] transition-transform duration-300 ${baseH}`}
     >
       <img
         src={img}
@@ -63,7 +62,7 @@ export const FeedItem = ({ business, priority, featured }: Props) => {
         style={{
           objectPosition: v.position,
           filter: `brightness(${v.brightness}) contrast(${v.contrast}) saturate(${v.saturate})`,
-          transform: `scale(${expanded ? v.zoom + 0.04 : v.zoom})`,
+          transform: `scale(${v.zoom})`,
         }}
         className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out"
       />
@@ -77,11 +76,9 @@ export const FeedItem = ({ business, priority, featured }: Props) => {
           <h2 className="font-display text-xl sm:text-2xl font-bold text-foreground drop-shadow-lg leading-tight">
             {business.name}
           </h2>
-          {business.zone && (
-            <p className="text-[10px] uppercase tracking-[0.2em] text-foreground/65 mt-1">
-              {business.zone} · {business.category}
-            </p>
-          )}
+          <p className="text-[10px] uppercase tracking-[0.2em] text-foreground/70 mt-1">
+            {business.zone ? `${business.zone} · ` : ""}{business.category}
+          </p>
         </div>
         <div className="shrink-0 flex flex-col items-end gap-1.5">
           {featured && (
@@ -100,20 +97,15 @@ export const FeedItem = ({ business, priority, featured }: Props) => {
 
       {/* Bottom row */}
       <div className="absolute bottom-0 inset-x-0 p-4 flex items-end justify-between gap-3">
-        <div className="min-w-0 flex flex-col gap-2">
+        <div className="min-w-0 flex flex-wrap items-center gap-1.5">
           {business.tag && (
-            <span className="self-start px-2 py-0.5 rounded-full bg-background/30 backdrop-blur-md border border-foreground/10 text-[10px] font-medium tracking-wide text-foreground/80">
+            <span className="px-2 py-0.5 rounded-full bg-background/30 backdrop-blur-md border border-foreground/10 text-[10px] font-medium tracking-wide text-foreground/85">
               {business.tag}
             </span>
           )}
-          {expanded && (
-            <button
-              onClick={(e) => e.stopPropagation()}
-              className="self-start inline-flex items-center gap-0.5 text-[11px] text-foreground/70 hover:text-foreground transition"
-            >
-              View details <ChevronRight className="h-3 w-3" />
-            </button>
-          )}
+          <span className="px-2 py-0.5 rounded-full bg-background/30 backdrop-blur-md border border-foreground/10 text-[10px] font-medium tracking-wide text-foreground/85">
+            {price}
+          </span>
         </div>
         <div className="flex items-center gap-2 ml-auto">
           {business.phone && (

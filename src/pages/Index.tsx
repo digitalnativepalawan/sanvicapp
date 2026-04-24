@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { FeedItem, type Business } from "@/components/FeedItem";
+import { BusinessSheet } from "@/components/BusinessSheet";
 
 const CATEGORIES = ["All", "Eat", "Experience", "Stay", "Travel"] as const;
 type Cat = (typeof CATEGORIES)[number];
@@ -9,6 +10,7 @@ const Index = () => {
   const [items, setItems] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Cat>("All");
+  const [active, setActive] = useState<Business | null>(null);
 
   useEffect(() => {
     document.title = "San Vicente Live — Eat, Stay, Explore";
@@ -73,9 +75,16 @@ const Index = () => {
             business={b}
             priority={i === 0}
             featured={i > 0 && i % 5 === 0}
+            onOpen={(biz) => setActive(biz)}
           />
         ))}
       </section>
+
+      <BusinessSheet
+        business={active}
+        open={!!active}
+        onOpenChange={(o) => !o && setActive(null)}
+      />
     </main>
   );
 };
