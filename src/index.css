@@ -43,11 +43,19 @@
     /* Cinematic gradients */
     --gradient-overlay: linear-gradient(
       to bottom,
-      hsl(220 25% 4% / 0.75) 0%,
-      hsl(220 25% 4% / 0.05) 28%,
+      hsl(220 25% 4% / 0.45) 0%,
+      hsl(220 25% 4% / 0.03) 25%,
       hsl(220 25% 4% / 0) 55%,
-      hsl(220 25% 4% / 0.55) 82%,
-      hsl(220 25% 4% / 0.9) 100%
+      hsl(220 25% 4% / 0.32) 82%,
+      hsl(220 25% 4% / 0.55) 100%
+    );
+    --gradient-overlay-strong: linear-gradient(
+      to bottom,
+      hsl(220 25% 4% / 0.6) 0%,
+      hsl(220 25% 4% / 0.05) 28%,
+      hsl(220 25% 4% / 0) 50%,
+      hsl(220 25% 4% / 0.45) 78%,
+      hsl(220 25% 4% / 0.7) 100%
     );
     --shadow-glow: 0 10px 40px -10px hsl(142 70% 49% / 0.5);
 
@@ -127,6 +135,9 @@
 @layer utilities {
   .feed-overlay {
     background: var(--gradient-overlay);
+  }
+  .feed-overlay-strong {
+    background: var(--gradient-overlay-strong);
   }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
