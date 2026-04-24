@@ -56,7 +56,7 @@ const Index = () => {
       </header>
 
       {/* Vertical feed */}
-      <section className="flex flex-col gap-1.5 pb-10">
+      <section className="flex flex-col gap-0.5 pb-10">
         {loading && (
           <div className="h-[72vh] flex items-center justify-center text-muted-foreground">
             Loading…
@@ -68,7 +68,12 @@ const Index = () => {
           </div>
         )}
         {visible.map((b, i) => (
-          <FeedItem key={b.id} business={b} priority={i === 0} />
+          <FeedItem
+            key={b.id}
+            business={b}
+            priority={i === 0}
+            featured={i > 0 && i % 5 === 0}
+          />
         ))}
       </section>
     </main>
