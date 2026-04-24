@@ -20,6 +20,7 @@ export type Database = {
           cover_image: string | null
           created_at: string
           id: string
+          images: string[] | null
           name: string
           phone: string | null
           season_status: string | null
@@ -32,6 +33,7 @@ export type Database = {
           cover_image?: string | null
           created_at?: string
           id?: string
+          images?: string[] | null
           name: string
           phone?: string | null
           season_status?: string | null
@@ -44,6 +46,7 @@ export type Database = {
           cover_image?: string | null
           created_at?: string
           id?: string
+          images?: string[] | null
           name?: string
           phone?: string | null
           season_status?: string | null

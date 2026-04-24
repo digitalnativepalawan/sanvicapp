@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FeedItem, type Business } from "@/components/FeedItem";
 import { BusinessSheet } from "@/components/BusinessSheet";
+import { EditBusinessModal } from "@/components/EditBusinessModal";
+import { AdminContext } from "@/lib/admin";
 
 const CATEGORIES = ["All", "Eat", "Experience", "Stay", "Travel"] as const;
 type Cat = (typeof CATEGORIES)[number];
 
 const Index = () => {
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith("/admin");
   const [items, setItems] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Cat>("All");
   const [active, setActive] = useState<Business | null>(null);
+  const [editing, setEditing] = useState<Business | null>(null);
 
   useEffect(() => {
     document.title = "San Vicente Live — Eat, Stay, Explore";
@@ -32,12 +38,18 @@ const Index = () => {
   const visible = filter === "All" ? items : items.filter((b) => b.category === filter);
 
   return (
+    <AdminContext.Provider value={isAdmin}>
     <main className="min-h-screen bg-background text-foreground">
       {/* Floating header */}
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
         <div className="px-5 pt-4 pb-3">
           <h1 className="font-display text-xl font-bold tracking-tight">
             San Vicente <span className="text-accent">Live</span>
+            {isAdmin && (
+              <span className="ml-2 px-2 py-0.5 rounded-full bg-accent/20 text-accent text-[10px] font-semibold uppercase tracking-wider align-middle">
+                Admin
+              </span>
+            )}
           </h1>
         </div>
         <div className="flex gap-2 px-5 pb-3 overflow-x-auto no-scrollbar">
@@ -76,6 +88,7 @@ const Index = () => {
             priority={i === 0}
             featured={i > 0 && i % 5 === 0}
             onOpen={(biz) => setActive(biz)}
+            onEdit={(biz) => setEditing(biz)}
           />
         ))}
       </section>
@@ -85,7 +98,14 @@ const Index = () => {
         open={!!active}
         onOpenChange={(o) => !o && setActive(null)}
       />
+      <EditBusinessModal
+        business={editing}
+        open={!!editing}
+        onOpenChange={(o) => !o && setEditing(null)}
+        onSaved={(b) => setItems((arr) => arr.map((x) => (x.id === b.id ? b : x)))}
+      />
     </main>
+    </AdminContext.Provider>
   );
 };
 
