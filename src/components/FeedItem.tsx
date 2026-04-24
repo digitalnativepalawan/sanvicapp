@@ -1,5 +1,6 @@
-import { Phone, MessageCircle, Star } from "lucide-react";
+import { Phone, MessageCircle, Star, Pencil } from "lucide-react";
 import { pickStockImage } from "@/lib/stockImages";
+import { useAdmin } from "@/lib/admin";
 
 export interface Business {
   id: string;
@@ -11,6 +12,7 @@ export interface Business {
   whatsapp: string | null;
   season_status: string | null;
   cover_image: string | null;
+  images?: string[] | null;
 }
 
 interface Props {
@@ -18,6 +20,7 @@ interface Props {
   priority?: boolean;
   featured?: boolean;
   onOpen?: (b: Business) => void;
+  onEdit?: (b: Business) => void;
 }
 
 const buildWhatsAppLink = (raw: string, name: string) => {
@@ -39,8 +42,12 @@ const variantFor = (id: string) => {
   return { zoom, brightness, contrast, saturate, position };
 };
 
-export const FeedItem = ({ business, priority, featured, onOpen }: Props) => {
-  const img = business.cover_image || pickStockImage(business.category, business.id);
+export const FeedItem = ({ business, priority, featured, onOpen, onEdit }: Props) => {
+  const admin = useAdmin();
+  const img =
+    (business.images && business.images[0]) ||
+    business.cover_image ||
+    pickStockImage(business.category, business.id);
   const v = variantFor(business.id);
 
   const baseH = featured ? "h-[78vh]" : "h-[58vh]";
@@ -69,6 +76,20 @@ export const FeedItem = ({ business, priority, featured, onOpen }: Props) => {
 
       {/* Cinematic gradient — lighter by default, slightly stronger for featured */}
       <div className={`absolute inset-0 pointer-events-none ${featured ? "feed-overlay-strong" : "feed-overlay"}`} />
+
+      {admin && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit?.(business);
+          }}
+          aria-label="Edit listing"
+          className="absolute top-3 right-3 z-10 h-9 w-9 grid place-items-center rounded-full bg-background/70 backdrop-blur-md border border-foreground/20 text-foreground active:scale-95 transition"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+      )}
 
       {/* Top row */}
       <div className="absolute top-0 inset-x-0 p-4 flex items-start justify-between gap-3">
