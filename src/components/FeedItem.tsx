@@ -16,6 +16,7 @@ export interface Business {
   latitude?: number | null;
   longitude?: number | null;
   featured?: boolean;
+  visible?: boolean; // Added visible property
 }
 
 interface Props {
