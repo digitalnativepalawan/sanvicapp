@@ -6,7 +6,10 @@ import { BusinessSheet } from "@/components/BusinessSheet";
 import { EditBusinessModal } from "@/components/EditBusinessModal";
 import { MapView } from "@/components/MapView";
 import { AdminContext } from "@/lib/admin";
-import { Lock, LogOut, Map as MapIcon, List } from "lucide-react";
+import { Lock, LogOut, Map as MapIcon, List, Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const CATEGORIES = ["All", "Eat", "Experience", "Stay", "Travel"] as const;
 type Cat = (typeof CATEGORIES)[number];
@@ -21,6 +24,9 @@ const Index = () => {
   const [active, setActive] = useState<Business | null>(null);
   const [editing, setEditing] = useState<Business | null>(null);
   const [view, setView] = useState<"feed" | "map">("feed");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Business[]>([]);
 
   const handleAdminToggle = () => {
     if (isAdmin) {
@@ -79,13 +85,37 @@ const Index = () => {
     fetchBusinesses();
   }, [fetchBusinesses]);
 
-  // Sort: Featured items first, then by creation date (newest first)
+  // Handle search
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
+    const results = items.filter(business => {
+      const searchLower = query.toLowerCase();
+      return (
+        business.name.toLowerCase().includes(searchLower) ||
+        (business.zone && business.zone.toLowerCase().includes(searchLower)) ||
+        (business.tag && business.tag.toLowerCase().includes(searchLower)) ||
+        business.category.toLowerCase().includes(searchLower)
+      );
+    });
+    setSearchResults(results);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setSearchOpen(false);
+  };
+
+  // Sort: Featured items first
   const visible = (filter === "All" ? items : items.filter((b) => b.category === filter))
     .sort((a, b) => {
-      // Featured items come first
       if (a.featured && !b.featured) return -1;
       if (!a.featured && b.featured) return 1;
-      // If both featured or both not featured, keep original order (newest first)
       return 0;
     });
 
@@ -104,6 +134,15 @@ const Index = () => {
                 )}
               </h1>
               <div className="flex items-center gap-2">
+                {/* Search Button */}
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  aria-label="Search"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  Search
+                </button>
                 <button
                   onClick={() => setView((v) => (v === "feed" ? "map" : "feed"))}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
@@ -140,6 +179,64 @@ const Index = () => {
             </div>
           </div>
         </header>
+
+        {/* Search Sheet */}
+        <Sheet open={searchOpen} onOpenChange={setSearchOpen}>
+          <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl bg-background border-t border-border/40">
+            <SheetHeader className="mb-4">
+              <SheetTitle className="text-left font-display text-xl">Search</SheetTitle>
+            </SheetHeader>
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, location, or category..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-9 pr-9 py-6 bg-secondary/50 border-border rounded-xl"
+                autoFocus
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => handleSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                >
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+            
+            <div className="overflow-y-auto h-[calc(85vh-140px)]">
+              {searchQuery && searchResults.length === 0 && (
+                <div className="text-center text-muted-foreground py-10">
+                  No results found for "{searchQuery}"
+                </div>
+              )}
+              
+              {searchResults.map((business) => (
+                <button
+                  key={business.id}
+                  onClick={() => {
+                    setActive(business);
+                    setSearchOpen(false);
+                    setSearchQuery("");
+                    setSearchResults([]);
+                  }}
+                  className="w-full text-left p-3 rounded-xl hover:bg-secondary/50 transition-colors mb-2"
+                >
+                  <h3 className="font-semibold text-foreground">{business.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {business.zone || "San Vicente"} · {business.category}
+                  </p>
+                  {business.tag && (
+                    <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-secondary text-[10px] text-muted-foreground">
+                      {business.tag}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
 
         {view === "map" ? (
           <MapView businesses={visible} onSelect={(b) => setActive(b)} />
