@@ -26,6 +26,14 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
   const tileRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const viewRef = useRef<"standard" | "satellite">("satellite");
+  const businessesRef = useRef<Business[]>(businesses);
+  const onSelectRef = useRef(onSelect);
+
+  // Keep refs updated
+  useEffect(() => {
+    businessesRef.current = businesses;
+    onSelectRef.current = onSelect;
+  }, [businesses, onSelect]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -45,6 +53,8 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
 
   useEffect(() => {
     if (!mapRef.current) return;
+    
+    // Clear existing markers
     markersRef.current.forEach((m) => mapRef.current!.removeLayer(m));
     markersRef.current = [];
 
@@ -63,22 +73,72 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
         ? `Curated ${b.tag || "island"} experience with trusted local guides.`
         : `Reliable transport service across ${b.zone || "San Vicente"}.`;
 
-      // Create popup content with data attributes
+      // Escape special characters in business name and description to prevent HTML injection
+      const escapeHtml = (str: string) => {
+        return str.replace(/[&<>]/g, function(m) {
+          if (m === '&') return '&amp;';
+          if (m === '<') return '&lt;';
+          if (m === '>') return '&gt;';
+          return m;
+        });
+      };
+
+      const escapedName = escapeHtml(b.name);
+      const escapedZone = escapeHtml(b.zone || "San Vicente");
+      const escapedCategory = escapeHtml(b.category);
+      const escapedDescription = escapeHtml(description);
+      const escapedId = escapeHtml(b.id);
+
       const popupDiv = L.DomUtil.create("div", "map-popup");
       popupDiv.innerHTML = `
         <div style="font-family: Inter, system-ui, sans-serif; min-width: 200px; text-align: left; background: #0a0d14; color: #f0f4f8; padding: 12px; border-radius: 8px;">
-          <h3 style="font-weight: 700; margin: 0 0 4px; font-size: 15px; color: #f0f4f8;">${b.name}</h3>
+          <h3 style="font-weight: 700; margin: 0 0 4px; font-size: 15px; color: #f0f4f8;">${escapedName}</h3>
           <p style="margin: 0 0 8px; font-size: 11px; color: #8899a6; text-transform: uppercase; letter-spacing: 0.05em;">
-            ${b.zone || "San Vicente"} · ${b.category}
+            ${escapedZone} · ${escapedCategory}
           </p>
           <p style="margin: 0 0 12px; font-size: 13px; color: #b8c5d0; line-height: 1.4;">
-            ${description}
+            ${escapedDescription}
           </p>
-          <button class="map-view-details-btn" data-business-id="${b.id}" style="width: 100%; padding: 10px; border-radius: 9999px; background: #10B981; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer;">
+          <button class="map-view-details-btn" data-business-id="${escapedId}" style="width: 100%; padding: 10px; border-radius: 9999px; background: #10B981; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer;">
             View details
           </button>
         </div>
       `;
+
+      // Bind click handler directly to the button when popup opens
+      marker.on('popupopen', () => {
+        const popupElement = marker.getPopup()?.getElement();
+        if (popupElement) {
+          const button = popupElement.querySelector('.map-view-details-btn');
+          if (button) {
+            const clickHandler = (e: Event) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const businessId = button.getAttribute('data-business-id');
+              const business = businessesRef.current.find((biz) => biz.id === businessId);
+              if (business) {
+                onSelectRef.current(business);
+                mapRef.current?.closePopup();
+              }
+            };
+            button.addEventListener('click', clickHandler);
+            // Store handler to remove later
+            (button as any)._clickHandler = clickHandler;
+          }
+        }
+      });
+
+      // Clean up event listeners when popup closes
+      marker.on('popupclose', () => {
+        const popupElement = marker.getPopup()?.getElement();
+        if (popupElement) {
+          const button = popupElement.querySelector('.map-view-details-btn');
+          if (button && (button as any)._clickHandler) {
+            button.removeEventListener('click', (button as any)._clickHandler);
+            delete (button as any)._clickHandler;
+          }
+        }
+      });
 
       marker.bindPopup(popupDiv, { closeButton: false, maxWidth: 240 });
       marker.addTo(group);
@@ -86,29 +146,12 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
     });
 
     group.addTo(mapRef.current);
-    mapRef.current.fitBounds(group.getBounds().pad(0.25), { animate: true });
-
-    // Use event delegation - listen for clicks on the map container
-    const handleClick = (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (target.classList.contains("map-view-details-btn")) {
-        const businessId = target.getAttribute("data-business-id");
-        const business = valid.find((b) => b.id === businessId);
-        if (business) {
-          onSelect(business);
-          // Close all popups
-          mapRef.current?.closePopup();
-        }
-      }
-    };
-
-    // Attach to document to catch clicks in popups
-    document.addEventListener("click", handleClick);
-
-    return () => {
-      document.removeEventListener("click", handleClick);
-    };
-  }, [businesses, onSelect]);
+    
+    // Only fit bounds if there are markers
+    if (valid.length > 0) {
+      mapRef.current.fitBounds(group.getBounds().pad(0.25), { animate: true });
+    }
+  }, [businesses]); // Remove onSelect from deps since we use refs
 
   return (
     <div className="relative h-[calc(100vh-110px)] w-full bg-secondary">
