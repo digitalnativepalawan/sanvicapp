@@ -61,7 +61,7 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
   )}`;
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
       <DrawerPortal>
         <DrawerOverlay className="bg-background/70 backdrop-blur-sm" />
         <DrawerContent className="max-h-[88vh] border-border/40 bg-background px-0">
