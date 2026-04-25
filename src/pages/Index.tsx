@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { FeedItem } from "@/components/FeedItem";
-import type { Business } from "@/components/FeedItem";
+import { FeedItem, type Business } from "@/components/FeedItem";
 import { BusinessSheet } from "@/components/BusinessSheet";
 import { EditBusinessModal } from "@/components/EditBusinessModal";
+import { MapView } from "@/components/MapView";
 import { AdminContext } from "@/lib/admin";
-import { Lock, LogOut } from "lucide-react";
+import { Lock, LogOut, Map as MapIcon, List } from "lucide-react";
 
 const CATEGORIES = ["All", "Eat", "Experience", "Stay", "Travel"] as const;
 type Cat = (typeof CATEGORIES)[number];
@@ -20,6 +20,7 @@ const Index = () => {
   const [filter, setFilter] = useState<Cat>("All");
   const [active, setActive] = useState<Business | null>(null);
   const [editing, setEditing] = useState<Business | null>(null);
+  const [view, setView] = useState<"feed" | "map">("feed");
 
   const handleAdminToggle = () => {
     if (isAdmin) {
@@ -79,6 +80,13 @@ const Index = () => {
             </div>
           </div>
           <div className="flex gap-2 px-5 pb-3 overflow-x-auto no-scrollbar">
+            <button
+              onClick={() => setView((v) => (v === "feed" ? "map" : "feed"))}
+              className="shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-foreground text-background"
+            >
+              {view === "feed" ? <MapIcon className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
+              {view === "feed" ? "Map" : "Feed"}
+            </button>
             {CATEGORIES.map((c) => (
               <button
                 key={c}
@@ -95,28 +103,32 @@ const Index = () => {
           </div>
         </header>
 
-        <section className="flex flex-col gap-0.5 pb-10">
-          {loading && (
-            <div className="h-[72vh] flex items-center justify-center text-muted-foreground">
-              Loading…
-            </div>
-          )}
-          {!loading && visible.length === 0 && (
-            <div className="h-[60vh] flex items-center justify-center text-muted-foreground">
-              Nothing here yet.
-            </div>
-          )}
-          {visible.map((b, i) => (
-            <FeedItem
-              key={b.id}
-              business={b}
-              priority={i === 0}
-              featured={i > 0 && i % 5 === 0}
-              onOpen={(biz) => setActive(biz)}
-              onEdit={(biz) => setEditing(biz)}
-            />
-          ))}
-        </section>
+        {view === "map" ? (
+          <MapView businesses={visible} onSelect={(b) => setActive(b)} />
+        ) : (
+          <section className="flex flex-col gap-0.5 pb-10">
+            {loading && (
+              <div className="h-[72vh] flex items-center justify-center text-muted-foreground">
+                Loading…
+              </div>
+            )}
+            {!loading && visible.length === 0 && (
+              <div className="h-[60vh] flex items-center justify-center text-muted-foreground">
+                Nothing here yet.
+              </div>
+            )}
+            {visible.map((b, i) => (
+              <FeedItem
+                key={b.id}
+                business={b}
+                priority={i === 0}
+                featured={i > 0 && i % 5 === 0}
+                onOpen={(biz) => setActive(biz)}
+                onEdit={(biz) => setEditing(biz)}
+              />
+            ))}
+          </section>
+        )}
 
         <BusinessSheet
           business={active}
