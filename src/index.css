@@ -142,3 +142,19 @@
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
 }
+
+/* Leaflet popup theming for map markers */
+.leaflet-popup-content-wrapper {
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 12px 32px -10px rgba(0,0,0,0.55) !important;
+  border: 1px solid hsl(var(--border));
+}
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.leaflet-popup-tip {
+  background: hsl(var(--popover)) !important;
+}
