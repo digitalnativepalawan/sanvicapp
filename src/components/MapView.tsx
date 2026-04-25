@@ -3,7 +3,6 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Business } from "./FeedItem";
 
-// Fix Leaflet default icon paths
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -28,7 +27,6 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
   const markersRef = useRef<L.Marker[]>([]);
   const viewRef = useRef<"standard" | "satellite">("satellite");
 
-  // Init map once
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     mapRef.current = L.map(containerRef.current, {
@@ -39,17 +37,14 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
     L.control.zoom({ position: "topright" }).addTo(mapRef.current);
   }, []);
 
-  // Toggle tiles
   useEffect(() => {
     if (!mapRef.current) return;
     if (tileRef.current) mapRef.current.removeLayer(tileRef.current);
     tileRef.current = L.tileLayer(TILE_URLS[viewRef.current], { maxZoom: 19 }).addTo(mapRef.current);
   }, [viewRef.current]);
 
-  // Render markers
   useEffect(() => {
     if (!mapRef.current) return;
-
     markersRef.current.forEach((m) => mapRef.current!.removeLayer(m));
     markersRef.current = [];
 
@@ -60,18 +55,18 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
 
     valid.forEach((b) => {
       const marker = L.marker([b.latitude!, b.longitude!]);
-      const popupHtml = `
+      const popupContent = `
         <div style="font-family: Inter, system-ui, sans-serif; min-width: 160px; text-align: left;">
           <h3 style="font-weight: 700; margin: 0 0 4px; font-size: 14px; color: #0f172a;">${b.name}</h3>
           <p style="margin: 0 0 8px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
             ${b.zone || "San Vicente"} · ${b.category}
           </p>
-          <button id="map-btn-${b.id}" style="width: 100%; padding: 8px; border-radius: 9999px; background: #10B981; color: #fff; font-weight: 600; font-size: 13px; border: none; cursor: pointer; transition: transform 0.1s;">
+          <button id="map-btn-${b.id}" style="width: 100%; padding: 8px; border-radius: 9999px; background: #10B981; color: #fff; font-weight: 600; font-size: 13px; border: none; cursor: pointer;">
             View details
           </button>
         </div>
       `;
-      marker.bindPopup(popupHtml, { closeButton: false, maxWidth: 220 });
+      marker.bindPopup(popupContent, { closeButton: false, maxWidth: 220 });
       marker.addTo(group);
       markersRef.current.push(marker);
 
