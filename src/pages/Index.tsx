@@ -59,6 +59,7 @@ const Index = () => {
     <AdminContext.Provider value={isAdmin}>
       <main className="min-h-screen bg-background text-foreground">
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
+          {/* Row 1: Logo + Actions */}
           <div className="px-5 pt-4 pb-3">
             <div className="flex items-center justify-between gap-3">
               <h1 className="font-display text-xl font-bold tracking-tight">
@@ -69,37 +70,44 @@ const Index = () => {
                   </span>
                 )}
               </h1>
-              <button
-                onClick={handleAdminToggle}
-                aria-label={isAdmin ? "Exit admin mode" : "Enter admin mode"}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
-              >
-                {isAdmin ? <LogOut className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
-                {isAdmin ? "Exit" : "Admin"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setView((v) => (v === "feed" ? "map" : "feed"))}
+                  aria-label={view === "feed" ? "Switch to map view" : "Switch to feed view"}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
+                >
+                  {view === "feed" ? <MapIcon className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
+                  {view === "feed" ? "Map" : "Feed"}
+                </button>
+                <button
+                  onClick={handleAdminToggle}
+                  aria-label={isAdmin ? "Exit admin mode" : "Enter admin mode"}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
+                >
+                  {isAdmin ? <LogOut className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                  {isAdmin ? "Exit" : "Admin"}
+                </button>
+              </div>
             </div>
           </div>
-          <div className="flex gap-2 px-5 pb-3 overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => setView((v) => (v === "feed" ? "map" : "feed"))}
-              className="shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-foreground text-background"
-            >
-              {view === "feed" ? <MapIcon className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
-              {view === "feed" ? "Map" : "Feed"}
-            </button>
-            {CATEGORIES.map((c) => (
-              <button
-                key={c}
-                onClick={() => setFilter(c)}
-                className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition ${
-                  filter === c
-                    ? "bg-foreground text-background"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
+
+          {/* Row 2: Category buttons - Stacked grid, no horizontal scroll */}
+          <div className="px-5 pb-4">
+            <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setFilter(c)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition text-center ${
+                    filter === c
+                      ? "bg-foreground text-background"
+                      : "bg-secondary text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
         </header>
 
