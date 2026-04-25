@@ -19,8 +19,12 @@ export type Database = {
           category: string
           cover_image: string | null
           created_at: string
+          description: string | null
+          featured: boolean
           id: string
           images: string[] | null
+          latitude: number | null
+          longitude: number | null
           name: string
           phone: string | null
           season_status: string | null
@@ -32,8 +36,12 @@ export type Database = {
           category: string
           cover_image?: string | null
           created_at?: string
+          description?: string | null
+          featured?: boolean
           id?: string
           images?: string[] | null
+          latitude?: number | null
+          longitude?: number | null
           name: string
           phone?: string | null
           season_status?: string | null
@@ -45,8 +53,12 @@ export type Database = {
           category?: string
           cover_image?: string | null
           created_at?: string
+          description?: string | null
+          featured?: boolean
           id?: string
           images?: string[] | null
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           phone?: string | null
           season_status?: string | null

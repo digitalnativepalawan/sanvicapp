@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Upload, X, Plus, Loader2 } from "lucide-react";
+import { Upload, X, Plus, Loader2, Star } from "lucide-react";
 import type { Business } from "./FeedItem";
 
 interface Props {
@@ -81,6 +81,9 @@ export const EditBusinessModal = ({ business, open, onOpenChange, onSaved }: Pro
       phone: form.phone,
       cover_image: cover,
       images,
+      featured: !!form.featured,
+      latitude: form.latitude ?? null,
+      longitude: form.longitude ?? null,
     };
     const { data, error } = await supabase
       .from("businesses")
@@ -127,6 +130,22 @@ export const EditBusinessModal = ({ business, open, onOpenChange, onSaved }: Pro
             </div>
           </Field>
 
+          <button
+            type="button"
+            onClick={() => set("featured", !form.featured as any)}
+            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md border ${
+              form.featured ? "bg-accent/15 border-accent/40 text-accent" : "border-border text-muted-foreground"
+            }`}
+          >
+            <span className="inline-flex items-center gap-2 text-sm font-medium">
+              <Star className={`h-4 w-4 ${form.featured ? "fill-current" : ""}`} />
+              Featured listing
+            </span>
+            <span className={`h-5 w-9 rounded-full relative transition ${form.featured ? "bg-accent" : "bg-secondary"}`}>
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-background transition-all ${form.featured ? "left-4" : "left-0.5"}`} />
+            </span>
+          </button>
+
           <div className="grid grid-cols-2 gap-3">
             <Field label="Zone">
               <Input value={form.zone ?? ""} onChange={(e) => set("zone", e.target.value)} />
@@ -142,6 +161,25 @@ export const EditBusinessModal = ({ business, open, onOpenChange, onSaved }: Pro
             </Field>
             <Field label="Phone">
               <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Latitude">
+              <Input
+                type="number"
+                step="any"
+                value={form.latitude ?? ""}
+                onChange={(e) => set("latitude", e.target.value === "" ? null : (parseFloat(e.target.value) as any))}
+              />
+            </Field>
+            <Field label="Longitude">
+              <Input
+                type="number"
+                step="any"
+                value={form.longitude ?? ""}
+                onChange={(e) => set("longitude", e.target.value === "" ? null : (parseFloat(e.target.value) as any))}
+              />
             </Field>
           </div>
 
