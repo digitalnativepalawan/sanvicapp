@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Upload, X, Plus, Loader2, Star, ChevronUp, ChevronDown, Eye, EyeOff } from "lucide-react";
+import { Upload, X, Plus, Loader2, Star, ChevronUp, ChevronDown, Eye, EyeOff, Trash2 } from "lucide-react";
 import type { Business } from "./FeedItem";
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onSaved: (b: Business) => void;
+  onDelete: (id: string) => void;
 }
 
 const CATS = ["Eat", "Stay", "Experience", "Travel"];
@@ -21,7 +22,7 @@ const csv = (arr?: string[] | null) => (arr && arr.length ? arr.join(", ") : "")
 const parseCsv = (s: string) =>
   s.split(",").map((x) => x.trim()).filter(Boolean);
 
-export const EditBusinessModal = ({ business, open, onOpenChange, onSaved }: Props) => {
+export const EditBusinessModal = ({ business, open, onOpenChange, onSaved, onDelete }: Props) => {
   const [form, setForm] = useState<Business | null>(business);
   const [images, setImages] = useState<string[]>([]);
   const [amenitiesText, setAmenitiesText] = useState("");
@@ -152,18 +153,31 @@ export const EditBusinessModal = ({ business, open, onOpenChange, onSaved }: Pro
     onOpenChange(false);
   };
 
+  const handleDelete = () => {
+    if (window.confirm(`Delete "${form.name}"? This cannot be undone.`)) {
+      onDelete(form.id);
+      onOpenChange(false);
+    }
+  };
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
       <DrawerPortal>
         <DrawerOverlay className="bg-background/70 backdrop-blur-sm" />
         <DrawerContent className="max-h-[92vh] border-border/40 bg-background px-0">
           <div className="flex flex-col overflow-hidden">
-            <div className="px-5 pt-2 pb-3 border-b border-border/40">
+            <div className="px-5 pt-2 pb-3 border-b border-border/40 flex items-center justify-between">
               <h2 className="font-display text-lg font-bold">Edit listing</h2>
+              <button
+                onClick={handleDelete}
+                className="p-2 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition"
+                aria-label="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
 
             <div className="overflow-y-auto px-5 pt-4 pb-32 space-y-4">
-              {/* Visible Toggle */}
               <button
                 type="button"
                 onClick={() => set("visible", !form.visible as any)}
@@ -174,11 +188,7 @@ export const EditBusinessModal = ({ business, open, onOpenChange, onSaved }: Pro
                 }`}
               >
                 <span className="inline-flex items-center gap-2 text-sm font-medium">
-                  {form.visible !== false ? (
-                    <Eye className="h-4 w-4" />
-                  ) : (
-                    <EyeOff className="h-4 w-4" />
-                  )}
+                  {form.visible !== false ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                   {form.visible !== false ? "Visible on website" : "Hidden from website"}
                 </span>
                 <span className={`h-5 w-9 rounded-full relative transition ${
