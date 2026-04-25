@@ -1,141 +1,110 @@
-import { useEffect, useMemo, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Business } from "./FeedItem";
-import { Layers } from "lucide-react";
 
-interface Props {
+// Fix Leaflet default icon paths
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
+const TILE_URLS = {
+  standard: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  satellite: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+};
+
+interface MapViewProps {
   businesses: Business[];
   onSelect: (b: Business) => void;
 }
 
-const CAT_COLOR: Record<string, string> = {
-  Eat: "#f59e0b",
-  Stay: "#ec4899",
-  Experience: "#10b981",
-  Travel: "#3b82f6",
-};
+export const MapView = ({ businesses, onSelect }: MapViewProps) => {
+  const mapRef = useRef<L.Map | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tileRef = useRef<L.TileLayer | null>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+  const viewRef = useRef<"standard" | "satellite">("satellite");
 
-const makeIcon = (category: string, featured: boolean) => {
-  const color = CAT_COLOR[category] ?? "#6b7280";
-  const size = featured ? 34 : 26;
-  const ring = featured
-    ? `<circle cx="14" cy="14" r="13" fill="none" stroke="${color}" stroke-width="2" opacity="0.5"/>`
-    : "";
-  const html = `<div style="width:${size}px;height:${size}px;display:grid;place-items:center;">
-    <svg viewBox="0 0 28 28" width="${size}" height="${size}">
-      ${ring}
-      <circle cx="14" cy="14" r="8" fill="${color}" stroke="white" stroke-width="2.5"/>
-    </svg>
-  </div>`;
-  return L.divIcon({
-    html,
-    className: "sv-pin",
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-  });
-};
-
-const FitBounds = ({ businesses }: { businesses: Business[] }) => {
-  const map = useMap();
+  // Init map once
   useEffect(() => {
-    const points = businesses
-      .filter((b) => typeof b.latitude === "number" && typeof b.longitude === "number")
-      .map((b) => [b.latitude!, b.longitude!] as [number, number]);
-    if (points.length === 0) return;
-    if (points.length === 1) {
-      map.setView(points[0], 15);
-    } else {
-      map.fitBounds(L.latLngBounds(points).pad(0.15));
-    }
-  }, [businesses, map]);
-  return null;
-};
+    if (!containerRef.current || mapRef.current) return;
+    mapRef.current = L.map(containerRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+      doubleClickZoom: false,
+    }).setView([10.55, 118.95], 12);
+    L.control.zoom({ position: "topright" }).addTo(mapRef.current);
+  }, []);
 
-export const MapView = ({ businesses, onSelect }: Props) => {
-  const [satellite, setSatellite] = useState(true);
-  const pinned = useMemo(
-    () =>
-      businesses.filter(
-        (b) => typeof b.latitude === "number" && typeof b.longitude === "number",
-      ),
-    [businesses],
-  );
+  // Toggle tiles
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (tileRef.current) mapRef.current.removeLayer(tileRef.current);
+    tileRef.current = L.tileLayer(TILE_URLS[viewRef.current], { maxZoom: 19 }).addTo(mapRef.current);
+  }, [viewRef.current]);
 
-  const center: [number, number] = pinned[0]
-    ? [pinned[0].latitude!, pinned[0].longitude!]
-    : [10.413, 119.179];
+  // Render markers
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    markersRef.current.forEach((m) => mapRef.current!.removeLayer(m));
+    markersRef.current = [];
+
+    const valid = businesses.filter((b) => b.latitude && b.longitude);
+    if (valid.length === 0) return;
+
+    const group = L.featureGroup();
+
+    valid.forEach((b) => {
+      const marker = L.marker([b.latitude!, b.longitude!]);
+      const popupHtml = `
+        <div style="font-family: Inter, system-ui, sans-serif; min-width: 160px; text-align: left;">
+          <h3 style="font-weight: 700; margin: 0 0 4px; font-size: 14px; color: #0f172a;">${b.name}</h3>
+          <p style="margin: 0 0 8px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
+            ${b.zone || "San Vicente"} · ${b.category}
+          </p>
+          <button id="map-btn-${b.id}" style="width: 100%; padding: 8px; border-radius: 9999px; background: #10B981; color: #fff; font-weight: 600; font-size: 13px; border: none; cursor: pointer; transition: transform 0.1s;">
+            View details
+          </button>
+        </div>
+      `;
+      marker.bindPopup(popupHtml, { closeButton: false, maxWidth: 220 });
+      marker.addTo(group);
+      markersRef.current.push(marker);
+
+      marker.on("popupopen", () => {
+        const btn = document.getElementById(`map-btn-${b.id}`);
+        if (btn) {
+          btn.onclick = () => {
+            onSelect(b);
+            mapRef.current?.closePopup();
+          };
+        }
+      });
+    });
+
+    group.addTo(mapRef.current);
+    mapRef.current.fitBounds(group.getBounds().pad(0.25), { animate: true });
+  }, [businesses, onSelect]);
 
   return (
-    <div className="relative h-[calc(100vh-128px)] w-full">
-      <MapContainer
-        center={center}
-        zoom={14}
-        scrollWheelZoom
-        className="h-full w-full"
-        style={{ background: "hsl(var(--background))" }}
-      >
-        {satellite ? (
-          <TileLayer
-            attribution='Tiles © Esri'
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            maxZoom={19}
-          />
-        ) : (
-          <TileLayer
-            attribution='© OpenStreetMap'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maxZoom={19}
-          />
-        )}
-        <FitBounds businesses={pinned} />
-        {pinned.map((b) => (
-          <Marker
-            key={b.id}
-            position={[b.latitude!, b.longitude!]}
-            icon={makeIcon(b.category, !!b.featured)}
-          >
-            <Popup closeButton={false} className="sv-popup">
-              <div className="min-w-[180px] max-w-[220px]">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">
-                  {b.zone ? `${b.zone} · ` : ""}{b.category}
-                </p>
-                <h4 className="font-display text-sm font-bold leading-tight mb-1 text-foreground">
-                  {b.name}
-                </h4>
-                {b.description && (
-                  <p className="text-[11px] text-foreground/75 leading-snug line-clamp-3 mb-2">
-                    {b.description}
-                  </p>
-                )}
-                <button
-                  onClick={() => onSelect(b)}
-                  className="mt-1 inline-flex items-center justify-center w-full px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold"
-                >
-                  View details
-                </button>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-
+    <div className="relative h-[calc(100vh-110px)] w-full bg-secondary">
+      <div ref={containerRef} className="absolute inset-0" />
       <button
-        onClick={() => setSatellite((s) => !s)}
-        className="absolute top-3 right-3 z-[1000] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/90 backdrop-blur border border-border text-xs font-medium shadow"
+        onClick={() => {
+          viewRef.current = viewRef.current === "satellite" ? "standard" : "satellite";
+          if (mapRef.current && tileRef.current) {
+            mapRef.current.removeLayer(tileRef.current);
+            tileRef.current = L.tileLayer(TILE_URLS[viewRef.current], { maxZoom: 19 }).addTo(mapRef.current);
+          }
+        }}
+        className="absolute top-4 right-14 z-[1000] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-border/40 text-xs font-medium shadow-sm active:scale-95 transition"
       >
-        <Layers className="h-3.5 w-3.5" />
-        {satellite ? "Standard" : "Satellite"}
+        {viewRef.current === "satellite" ? "🛰️ Satellite" : "🗺️ Standard"}
       </button>
-
-      {pinned.length === 0 && (
-        <div className="absolute inset-0 grid place-items-center pointer-events-none">
-          <p className="text-sm text-muted-foreground bg-background/80 px-4 py-2 rounded-full">
-            No mapped listings yet
-          </p>
-        </div>
-      )}
     </div>
   );
 };
