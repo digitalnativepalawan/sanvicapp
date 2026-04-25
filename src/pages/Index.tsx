@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { FeedItem, type Business } from "@/components/FeedItem";
+import { FeedItem } from "@/components/FeedItem";
+import type { Business } from "@/components/FeedItem";
 import { BusinessSheet } from "@/components/BusinessSheet";
 import { EditBusinessModal } from "@/components/EditBusinessModal";
-import { KmlImporter } from "@/components/KmlImporter";
-import { MapView } from "@/components/MapView";
 import { AdminContext } from "@/lib/admin";
-import { Lock, LogOut, Map as MapIcon, List, Upload } from "lucide-react";
+import { Lock, LogOut } from "lucide-react";
 
 const CATEGORIES = ["All", "Eat", "Experience", "Stay", "Travel"] as const;
 type Cat = (typeof CATEGORIES)[number];
@@ -21,8 +20,6 @@ const Index = () => {
   const [filter, setFilter] = useState<Cat>("All");
   const [active, setActive] = useState<Business | null>(null);
   const [editing, setEditing] = useState<Business | null>(null);
-  const [view, setView] = useState<"feed" | "map">("feed");
-  const [importerOpen, setImporterOpen] = useState(false);
 
   const handleAdminToggle = () => {
     if (isAdmin) {
@@ -44,18 +41,15 @@ const Index = () => {
     if (meta) meta.setAttribute("content", "Discover restaurants, stays, tours and transport in San Vicente, Palawan. Tap to message instantly.");
   }, []);
 
-  const fetchItems = async () => {
-    const { data, error } = await supabase
-      .from("businesses")
-      .select("*")
-      .order("featured", { ascending: false })
-      .order("created_at", { ascending: false });
-    if (!error && data) setItems(data as Business[]);
-    setLoading(false);
-  };
-
   useEffect(() => {
-    fetchItems();
+    (async () => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!error && data) setItems(data as Business[]);
+      setLoading(false);
+    })();
   }, []);
 
   const visible = filter === "All" ? items : items.filter((b) => b.category === filter);
@@ -85,22 +79,6 @@ const Index = () => {
             </div>
           </div>
           <div className="flex gap-2 px-5 pb-3 overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => setView((v) => (v === "feed" ? "map" : "feed"))}
-              className="shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-foreground text-background"
-            >
-              {view === "feed" ? <MapIcon className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
-              {view === "feed" ? "Map" : "Feed"}
-            </button>
-            {isAdmin && (
-              <button
-                onClick={() => setImporterOpen(true)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-accent/20 text-accent"
-              >
-                <Upload className="h-3.5 w-3.5" />
-                Import KML
-              </button>
-            )}
             {CATEGORIES.map((c) => (
               <button
                 key={c}
@@ -117,32 +95,28 @@ const Index = () => {
           </div>
         </header>
 
-        {view === "map" ? (
-          <MapView businesses={visible} onSelect={(b) => setActive(b)} />
-        ) : (
-          <section className="flex flex-col gap-0.5 pb-10">
-            {loading && (
-              <div className="h-[72vh] flex items-center justify-center text-muted-foreground">
-                Loading…
-              </div>
-            )}
-            {!loading && visible.length === 0 && (
-              <div className="h-[60vh] flex items-center justify-center text-muted-foreground">
-                Nothing here yet.
-              </div>
-            )}
-            {visible.map((b, i) => (
-              <FeedItem
-                key={b.id}
-                business={b}
-                priority={i === 0}
-                featured={!!b.featured || (i > 0 && i % 5 === 0)}
-                onOpen={(biz) => setActive(biz)}
-                onEdit={(biz) => setEditing(biz)}
-              />
-            ))}
-          </section>
-        )}
+        <section className="flex flex-col gap-0.5 pb-10">
+          {loading && (
+            <div className="h-[72vh] flex items-center justify-center text-muted-foreground">
+              Loading…
+            </div>
+          )}
+          {!loading && visible.length === 0 && (
+            <div className="h-[60vh] flex items-center justify-center text-muted-foreground">
+              Nothing here yet.
+            </div>
+          )}
+          {visible.map((b, i) => (
+            <FeedItem
+              key={b.id}
+              business={b}
+              priority={i === 0}
+              featured={i > 0 && i % 5 === 0}
+              onOpen={(biz) => setActive(biz)}
+              onEdit={(biz) => setEditing(biz)}
+            />
+          ))}
+        </section>
 
         <BusinessSheet
           business={active}
@@ -155,7 +129,6 @@ const Index = () => {
           onOpenChange={(o) => !o && setEditing(null)}
           onSaved={(b) => setItems((arr) => arr.map((x) => (x.id === b.id ? b : x)))}
         />
-        <KmlImporter open={importerOpen} onOpenChange={setImporterOpen} onImported={fetchItems} />
       </main>
     </AdminContext.Provider>
   );
