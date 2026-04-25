@@ -13,6 +13,10 @@ export interface Business {
   season_status: string | null;
   cover_image: string | null;
   images?: string[] | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  featured?: boolean | null;
+  description?: string | null;
 }
 
 interface Props {
