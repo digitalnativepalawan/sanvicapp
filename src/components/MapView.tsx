@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Business } from "./FeedItem";
@@ -95,8 +95,29 @@ export const MapView = ({ businesses, onSelect }: Props) => {
             key={b.id}
             position={[b.latitude!, b.longitude!]}
             icon={makeIcon(b.category, !!b.featured)}
-            eventHandlers={{ click: () => onSelect(b) }}
-          />
+          >
+            <Popup closeButton={false} className="sv-popup">
+              <div className="min-w-[180px] max-w-[220px]">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">
+                  {b.zone ? `${b.zone} · ` : ""}{b.category}
+                </p>
+                <h4 className="font-display text-sm font-bold leading-tight mb-1 text-foreground">
+                  {b.name}
+                </h4>
+                {b.description && (
+                  <p className="text-[11px] text-foreground/75 leading-snug line-clamp-3 mb-2">
+                    {b.description}
+                  </p>
+                )}
+                <button
+                  onClick={() => onSelect(b)}
+                  className="mt-1 inline-flex items-center justify-center w-full px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold"
+                >
+                  View details
+                </button>
+              </div>
+            </Popup>
+          </Marker>
         ))}
       </MapContainer>
 
