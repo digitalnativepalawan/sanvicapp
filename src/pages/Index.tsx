@@ -62,102 +62,101 @@ const Index = () => {
 
   return (
     <AdminContext.Provider value={isAdmin}>
-    <main className="min-h-screen bg-background text-foreground">
-      {/* Floating header */}
-      <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
-        <div className="px-5 pt-4 pb-3">
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="font-display text-xl font-bold tracking-tight">
-              San Vicente <span className="text-accent">Live</span>
-              {isAdmin && (
-                <span className="ml-2 px-2 py-0.5 rounded-full bg-accent/20 text-accent text-[10px] font-semibold uppercase tracking-wider align-middle">
-                  Admin
-                </span>
-              )}
-            </h1>
-            <button
-              onClick={handleAdminToggle}
-              aria-label={isAdmin ? "Exit admin mode" : "Enter admin mode"}
-              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
-            >
-              {isAdmin ? <LogOut className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
-              {isAdmin ? "Exit" : "Admin"}
-            </button>
+      <main className="min-h-screen bg-background text-foreground">
+        <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
+          <div className="px-5 pt-4 pb-3">
+            <div className="flex items-center justify-between gap-3">
+              <h1 className="font-display text-xl font-bold tracking-tight">
+                San Vicente <span className="text-accent">Live</span>
+                {isAdmin && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-accent/20 text-accent text-[10px] font-semibold uppercase tracking-wider align-middle">
+                    Admin
+                  </span>
+                )}
+              </h1>
+              <button
+                onClick={handleAdminToggle}
+                aria-label={isAdmin ? "Exit admin mode" : "Enter admin mode"}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
+              >
+                {isAdmin ? <LogOut className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                {isAdmin ? "Exit" : "Admin"}
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2 px-5 pb-3 overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => setView((v) => (v === "feed" ? "map" : "feed"))}
-            className="shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-foreground text-background"
-          >
-            {view === "feed" ? <MapIcon className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
-            {view === "feed" ? "Map" : "Feed"}
-          </button>
-          {isAdmin && (
+          <div className="flex gap-2 px-5 pb-3 overflow-x-auto no-scrollbar">
             <button
-              onClick={() => setImporterOpen(true)}
-              className="shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-accent/20 text-accent"
+              onClick={() => setView((v) => (v === "feed" ? "map" : "feed"))}
+              className="shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-foreground text-background"
             >
-              <Upload className="h-3.5 w-3.5" />
-              Import KML
+              {view === "feed" ? <MapIcon className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
+              {view === "feed" ? "Map" : "Feed"}
             </button>
-          )}
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              onClick={() => setFilter(c)}
-              className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition ${
-                filter === c
-                  ? "bg-foreground text-background"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-      </header>
+            {isAdmin && (
+              <button
+                onClick={() => setImporterOpen(true)}
+                className="shrink-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-accent/20 text-accent"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Import KML
+              </button>
+            )}
+            {CATEGORIES.map((c) => (
+              <button
+                key={c}
+                onClick={() => setFilter(c)}
+                className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition ${
+                  filter === c
+                    ? "bg-foreground text-background"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </header>
 
-      {view === "map" ? (
-        <MapView businesses={visible} onSelect={(b) => setActive(b)} />
-      ) : (
-      <section className="flex flex-col gap-0.5 pb-10">
-        {loading && (
-          <div className="h-[72vh] flex items-center justify-center text-muted-foreground">
-            Loading…
-          </div>
+        {view === "map" ? (
+          <MapView businesses={visible} onSelect={(b) => setActive(b)} />
+        ) : (
+          <section className="flex flex-col gap-0.5 pb-10">
+            {loading && (
+              <div className="h-[72vh] flex items-center justify-center text-muted-foreground">
+                Loading…
+              </div>
+            )}
+            {!loading && visible.length === 0 && (
+              <div className="h-[60vh] flex items-center justify-center text-muted-foreground">
+                Nothing here yet.
+              </div>
+            )}
+            {visible.map((b, i) => (
+              <FeedItem
+                key={b.id}
+                business={b}
+                priority={i === 0}
+                featured={!!b.featured || (i > 0 && i % 5 === 0)}
+                onOpen={(biz) => setActive(biz)}
+                onEdit={(biz) => setEditing(biz)}
+              />
+            ))}
+          </section>
         )}
-        {!loading && visible.length === 0 && (
-          <div className="h-[60vh] flex items-center justify-center text-muted-foreground">
-            Nothing here yet.
-          </div>
-        )}
-        {visible.map((b, i) => (
-          <FeedItem
-            key={b.id}
-            business={b}
-            priority={i === 0}
-            featured={!!b.featured || (i > 0 && i % 5 === 0)}
-            onOpen={(biz) => setActive(biz)}
-            onEdit={(biz) => setEditing(biz)}
-          />
-        ))}
-      </section>
-      )}
 
-      <BusinessSheet
-        business={active}
-        open={!!active}
-        onOpenChange={(o) => !o && setActive(null)}
-      />
-      <EditBusinessModal
-        business={editing}
-        open={!!editing}
-        onOpenChange={(o) => !o && setEditing(null)}
-        onSaved={(b) => setItems((arr) => arr.map((x) => (x.id === b.id ? b : x)))}
-      />
-      <KmlImporter open={importerOpen} onOpenChange={setImporterOpen} onImported={fetchItems} />
-    </main>
+        <BusinessSheet
+          business={active}
+          open={!!active}
+          onOpenChange={(o) => !o && setActive(null)}
+        />
+        <EditBusinessModal
+          business={editing}
+          open={!!editing}
+          onOpenChange={(o) => !o && setEditing(null)}
+          onSaved={(b) => setItems((arr) => arr.map((x) => (x.id === b.id ? b : x)))}
+        />
+        <KmlImporter open={importerOpen} onOpenChange={setImporterOpen} onImported={fetchItems} />
+      </main>
     </AdminContext.Provider>
   );
 };
