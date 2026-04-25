@@ -34,10 +34,17 @@ export const EditBusinessModal = ({ business, open, onOpenChange, onSaved, onDel
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setForm(business);
-    setImages(business?.images ?? (business?.cover_image ? [business.cover_image] : []));
-    setAmenitiesText(csv(business?.amenities));
-    setServicesText(csv(business?.services));
+    if (business) {
+      setForm(business);
+      setImages(business.images ?? (business.cover_image ? [business.cover_image] : []));
+      setAmenitiesText(csv(business.amenities));
+      setServicesText(csv(business.services));
+    } else {
+      setForm(null);
+      setImages([]);
+      setAmenitiesText("");
+      setServicesText("");
+    }
     setNewUrl("");
   }, [business]);
 
@@ -105,6 +112,7 @@ export const EditBusinessModal = ({ business, open, onOpenChange, onSaved, onDel
         uploaded.push(data.publicUrl);
       }
       setImages((arr) => [...arr, ...uploaded]);
+      toast({ title: `Uploaded ${uploaded.length} image(s)` });
     } catch (e: any) {
       toast({ title: "Upload failed", description: e.message, variant: "destructive" });
     } finally {
@@ -137,27 +145,48 @@ export const EditBusinessModal = ({ business, open, onOpenChange, onSaved, onDel
       latitude: form.latitude ?? null,
       longitude: form.longitude ?? null,
     };
+    
+    console.log("Saving payload:", payload); // Debug log
+    
     const { data, error } = await supabase
       .from("businesses")
       .update(payload)
       .eq("id", form.id)
       .select()
       .single();
+      
     setSaving(false);
+    
     if (error) {
+      console.error("Save error:", error);
       toast({ title: "Save failed", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Saved" });
+    
+    console.log("Saved successfully:", data);
+    toast({ title: "Saved successfully!" });
     onSaved(data as Business);
     onOpenChange(false);
   };
 
-  const handleDelete = () => {
-    if (window.confirm(`Delete "${form.name}"? This cannot be undone.`)) {
-      onDelete(form.id);
-      onOpenChange(false);
+  const handleDelete = async () => {
+    if (!form) return;
+    const confirmed = window.confirm(`Delete "${form.name}"? This cannot be undone.`);
+    if (!confirmed) return;
+    
+    setSaving(true);
+    const { error } = await supabase.from("businesses").delete().eq("id", form.id);
+    setSaving(false);
+    
+    if (error) {
+      console.error("Delete error:", error);
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      return;
     }
+    
+    toast({ title: "Deleted successfully!" });
+    onDelete(form.id);
+    onOpenChange(false);
   };
 
   return (
@@ -170,7 +199,8 @@ export const EditBusinessModal = ({ business, open, onOpenChange, onSaved, onDel
               <h2 className="font-display text-lg font-bold">Edit listing</h2>
               <button
                 onClick={handleDelete}
-                className="p-2 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition"
+                disabled={saving}
+                className="p-2 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 transition disabled:opacity-50"
                 aria-label="Delete"
               >
                 <Trash2 className="h-4 w-4" />
@@ -178,6 +208,7 @@ export const EditBusinessModal = ({ business, open, onOpenChange, onSaved, onDel
             </div>
 
             <div className="overflow-y-auto px-5 pt-4 pb-32 space-y-4">
+              {/* Visible Toggle */}
               <button
                 type="button"
                 onClick={() => set("visible", !form.visible as any)}
