@@ -55,18 +55,29 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
 
     valid.forEach((b) => {
       const marker = L.marker([b.latitude!, b.longitude!]);
+      const description = b.category === "Stay" 
+        ? `Comfortable ${b.zone || "San Vicente"} stay, ideal for slow island days.`
+        : b.category === "Eat"
+        ? `Local favorite serving fresh ${b.zone?.toLowerCase().includes("beach") ? "seafood" : "Filipino dishes"}.`
+        : b.category === "Experience"
+        ? `Curated ${b.tag || "island"} experience with trusted local guides.`
+        : `Reliable transport service across ${b.zone || "San Vicente"}.`;
+
       const popupContent = `
-        <div style="font-family: Inter, system-ui, sans-serif; min-width: 160px; text-align: left;">
-          <h3 style="font-weight: 700; margin: 0 0 4px; font-size: 14px; color: #0f172a;">${b.name}</h3>
-          <p style="margin: 0 0 8px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
+        <div style="font-family: Inter, system-ui, sans-serif; min-width: 200px; text-align: left; background: #0a0d14; color: #f0f4f8; padding: 12px; border-radius: 8px;">
+          <h3 style="font-weight: 700; margin: 0 0 4px; font-size: 15px; color: #f0f4f8;">${b.name}</h3>
+          <p style="margin: 0 0 8px; font-size: 11px; color: #8899a6; text-transform: uppercase; letter-spacing: 0.05em;">
             ${b.zone || "San Vicente"} · ${b.category}
           </p>
-          <button id="map-btn-${b.id}" style="width: 100%; padding: 8px; border-radius: 9999px; background: #10B981; color: #fff; font-weight: 600; font-size: 13px; border: none; cursor: pointer;">
+          <p style="margin: 0 0 12px; font-size: 13px; color: #b8c5d0; line-height: 1.4;">
+            ${description}
+          </p>
+          <button id="map-btn-${b.id}" style="width: 100%; padding: 10px; border-radius: 9999px; background: #10B981; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer; transition: transform 0.1s;">
             View details
           </button>
         </div>
       `;
-      marker.bindPopup(popupContent, { closeButton: false, maxWidth: 220 });
+      marker.bindPopup(popupContent, { closeButton: false, maxWidth: 240 });
       marker.addTo(group);
       markersRef.current.push(marker);
 
