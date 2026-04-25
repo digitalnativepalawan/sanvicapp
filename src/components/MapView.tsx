@@ -26,18 +26,6 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
   const tileRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const viewRef = useRef<"standard" | "satellite">("satellite");
-  const businessesMapRef = useRef<Map<string, Business>>(new Map());
-  const onSelectRef = useRef(onSelect);
-
-  // Update businesses map when data changes
-  useEffect(() => {
-    const map = new Map();
-    businesses.forEach(b => {
-      if (b.id) map.set(b.id, b);
-    });
-    businessesMapRef.current = map;
-    onSelectRef.current = onSelect;
-  }, [businesses, onSelect]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -55,44 +43,10 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
     tileRef.current = L.tileLayer(TILE_URLS[viewRef.current], { maxZoom: 19 }).addTo(mapRef.current);
   }, [viewRef.current]);
 
-  // Global click handler that works with Leaflet's popup DOM
-  useEffect(() => {
-    const handleGlobalClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      // Check if clicked element or parent is the view details button
-      const button = target.closest('.map-view-details-btn');
-      if (button) {
-        e.preventDefault();
-        e.stopPropagation();
-        const businessId = button.getAttribute('data-business-id');
-        if (businessId) {
-          const business = businessesMapRef.current.get(businessId);
-          if (business) {
-            onSelectRef.current(business);
-            // Close any open popup
-            if (mapRef.current) {
-              mapRef.current.closePopup();
-            }
-          }
-        }
-      }
-    };
-
-    // Add to document with capture to ensure it fires
-    document.addEventListener('click', handleGlobalClick, true);
-    
-    return () => {
-      document.removeEventListener('click', handleGlobalClick, true);
-    };
-  }, []);
-
   useEffect(() => {
     if (!mapRef.current) return;
     
-    // Clear existing markers
-    markersRef.current.forEach((m) => {
-      if (mapRef.current) mapRef.current.removeLayer(m);
-    });
+    markersRef.current.forEach((m) => mapRef.current!.removeLayer(m));
     markersRef.current = [];
 
     const valid = businesses.filter((b) => b.latitude && b.longitude);
@@ -111,40 +65,22 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
         ? `Curated ${b.tag || "island"} experience with trusted local guides.`
         : `Reliable transport service across ${b.zone || "San Vicente"}.`;
 
-      // Escape special characters
-      const escapeHtml = (str: string) => {
-        if (!str) return '';
-        return str
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
-      };
-
-      const escapedName = escapeHtml(b.name);
-      const escapedZone = escapeHtml(b.zone || "San Vicente");
-      const escapedCategory = escapeHtml(b.category);
-      const escapedDescription = escapeHtml(description);
-      const escapedId = escapeHtml(b.id);
-
-      // Create popup content with a unique ID for debugging
+      // Create a unique ID for this popup
+      const popupId = `popup-${b.id}`;
+      
       const popupHtml = `
-        <div class="custom-map-popup" style="font-family: Inter, system-ui, sans-serif; min-width: 200px; text-align: left; background: #0a0d14; color: #f0f4f8; padding: 12px; border-radius: 8px;">
-          <h3 style="font-weight: 700; margin: 0 0 4px; font-size: 15px; color: #f0f4f8;">${escapedName}</h3>
+        <div id="${popupId}" style="font-family: Inter, system-ui, sans-serif; min-width: 200px; text-align: left; background: #0a0d14; color: #f0f4f8; padding: 12px; border-radius: 8px;">
+          <h3 style="font-weight: 700; margin: 0 0 4px; font-size: 15px; color: #f0f4f8;">${b.name}</h3>
           <p style="margin: 0 0 8px; font-size: 11px; color: #8899a6; text-transform: uppercase; letter-spacing: 0.05em;">
-            ${escapedZone} · ${escapedCategory}
+            ${b.zone || "San Vicente"} · ${b.category}
           </p>
           <p style="margin: 0 0 12px; font-size: 13px; color: #b8c5d0; line-height: 1.4;">
-            ${escapedDescription}
+            ${description}
           </p>
           <button 
             class="map-view-details-btn" 
-            data-business-id="${escapedId}"
-            data-business-name="${escapedName}"
-            style="width: 100%; padding: 10px; border-radius: 9999px; background: #10B981; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer; transition: opacity 0.2s;"
-            onmouseover="this.style.opacity='0.9'"
-            onmouseout="this.style.opacity='1'"
+            data-business-id="${b.id}"
+            style="width: 100%; padding: 10px; border-radius: 9999px; background: #10B981; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer;"
           >
             View details
           </button>
@@ -157,11 +93,36 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
     });
 
     group.addTo(mapRef.current);
-    
-    if (valid.length > 0) {
-      mapRef.current.fitBounds(group.getBounds().pad(0.25), { animate: true });
-    }
+    mapRef.current.fitBounds(group.getBounds().pad(0.25), { animate: true });
   }, [businesses]);
+
+  // Single, simple click handler
+  useEffect(() => {
+    const handlePopupClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const button = target.closest('.map-view-details-btn');
+      
+      if (button) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const businessId = button.getAttribute('data-business-id');
+        const business = businesses.find(b => b.id === businessId);
+        
+        if (business) {
+          onSelect(business);
+          mapRef.current?.closePopup();
+        }
+      }
+    };
+
+    // Attach to document
+    document.addEventListener('click', handlePopupClick);
+    
+    return () => {
+      document.removeEventListener('click', handlePopupClick);
+    };
+  }, [businesses, onSelect]);
 
   return (
     <div className="relative h-[calc(100vh-110px)] w-full bg-secondary">
