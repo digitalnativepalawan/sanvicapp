@@ -1,22 +1,38 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FeedItem, type Business } from "@/components/FeedItem";
 import { BusinessSheet } from "@/components/BusinessSheet";
 import { EditBusinessModal } from "@/components/EditBusinessModal";
 import { AdminContext } from "@/lib/admin";
+import { Lock, LogOut } from "lucide-react";
 
 const CATEGORIES = ["All", "Eat", "Experience", "Stay", "Travel"] as const;
 type Cat = (typeof CATEGORIES)[number];
 
 const Index = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isAdmin = location.pathname.startsWith("/admin");
   const [items, setItems] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Cat>("All");
   const [active, setActive] = useState<Business | null>(null);
   const [editing, setEditing] = useState<Business | null>(null);
+
+  const handleAdminToggle = () => {
+    if (isAdmin) {
+      navigate("/");
+      return;
+    }
+    const code = window.prompt("Enter admin passkey");
+    if (code === null) return;
+    if (code.trim() === "5309") {
+      navigate("/admin");
+    } else {
+      window.alert("Incorrect passkey");
+    }
+  };
 
   useEffect(() => {
     document.title = "San Vicente Live — Eat, Stay, Explore";
@@ -43,14 +59,24 @@ const Index = () => {
       {/* Floating header */}
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
         <div className="px-5 pt-4 pb-3">
-          <h1 className="font-display text-xl font-bold tracking-tight">
-            San Vicente <span className="text-accent">Live</span>
-            {isAdmin && (
-              <span className="ml-2 px-2 py-0.5 rounded-full bg-accent/20 text-accent text-[10px] font-semibold uppercase tracking-wider align-middle">
-                Admin
-              </span>
-            )}
-          </h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="font-display text-xl font-bold tracking-tight">
+              San Vicente <span className="text-accent">Live</span>
+              {isAdmin && (
+                <span className="ml-2 px-2 py-0.5 rounded-full bg-accent/20 text-accent text-[10px] font-semibold uppercase tracking-wider align-middle">
+                  Admin
+                </span>
+              )}
+            </h1>
+            <button
+              onClick={handleAdminToggle}
+              aria-label={isAdmin ? "Exit admin mode" : "Enter admin mode"}
+              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
+            >
+              {isAdmin ? <LogOut className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+              {isAdmin ? "Exit" : "Admin"}
+            </button>
+          </div>
         </div>
         <div className="flex gap-2 px-5 pb-3 overflow-x-auto no-scrollbar">
           {CATEGORIES.map((c) => (
