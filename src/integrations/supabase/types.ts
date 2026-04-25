@@ -16,53 +16,71 @@ export type Database = {
     Tables: {
       businesses: {
         Row: {
+          amenities: string[]
+          categories: string[]
           category: string
           cover_image: string | null
           created_at: string
           description: string | null
+          facebook: string | null
           featured: boolean
           id: string
           images: string[] | null
+          instagram: string | null
           latitude: number | null
           longitude: number | null
           name: string
           phone: string | null
           season_status: string | null
+          services: string[]
           tag: string | null
+          website: string | null
           whatsapp: string | null
           zone: string | null
         }
         Insert: {
+          amenities?: string[]
+          categories?: string[]
           category: string
           cover_image?: string | null
           created_at?: string
           description?: string | null
+          facebook?: string | null
           featured?: boolean
           id?: string
           images?: string[] | null
+          instagram?: string | null
           latitude?: number | null
           longitude?: number | null
           name: string
           phone?: string | null
           season_status?: string | null
+          services?: string[]
           tag?: string | null
+          website?: string | null
           whatsapp?: string | null
           zone?: string | null
         }
         Update: {
+          amenities?: string[]
+          categories?: string[]
           category?: string
           cover_image?: string | null
           created_at?: string
           description?: string | null
+          facebook?: string | null
           featured?: boolean
           id?: string
           images?: string[] | null
+          instagram?: string | null
           latitude?: number | null
           longitude?: number | null
           name?: string
           phone?: string | null
           season_status?: string | null
+          services?: string[]
           tag?: string | null
+          website?: string | null
           whatsapp?: string | null
           zone?: string | null
         }
