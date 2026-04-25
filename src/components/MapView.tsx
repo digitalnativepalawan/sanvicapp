@@ -63,8 +63,10 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
         ? `Curated ${b.tag || "island"} experience with trusted local guides.`
         : `Reliable transport service across ${b.zone || "San Vicente"}.`;
 
-      const popupContent = `
-        <div class="map-popup-content" data-business-id="${b.id}" style="font-family: Inter, system-ui, sans-serif; min-width: 200px; text-align: left; background: #0a0d14; color: #f0f4f8; padding: 12px; border-radius: 8px;">
+      // Create popup content with data attributes
+      const popupDiv = L.DomUtil.create("div", "map-popup");
+      popupDiv.innerHTML = `
+        <div style="font-family: Inter, system-ui, sans-serif; min-width: 200px; text-align: left; background: #0a0d14; color: #f0f4f8; padding: 12px; border-radius: 8px;">
           <h3 style="font-weight: 700; margin: 0 0 4px; font-size: 15px; color: #f0f4f8;">${b.name}</h3>
           <p style="margin: 0 0 8px; font-size: 11px; color: #8899a6; text-transform: uppercase; letter-spacing: 0.05em;">
             ${b.zone || "San Vicente"} · ${b.category}
@@ -72,12 +74,13 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
           <p style="margin: 0 0 12px; font-size: 13px; color: #b8c5d0; line-height: 1.4;">
             ${description}
           </p>
-          <button class="map-view-details-btn" data-business-id="${b.id}" style="width: 100%; padding: 10px; border-radius: 9999px; background: #10B981; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer; transition: transform 0.1s;">
+          <button class="map-view-details-btn" data-business-id="${b.id}" style="width: 100%; padding: 10px; border-radius: 9999px; background: #10B981; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer;">
             View details
           </button>
         </div>
       `;
-      marker.bindPopup(popupContent, { closeButton: false, maxWidth: 240 });
+
+      marker.bindPopup(popupDiv, { closeButton: false, maxWidth: 240 });
       marker.addTo(group);
       markersRef.current.push(marker);
     });
@@ -85,7 +88,7 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
     group.addTo(mapRef.current);
     mapRef.current.fitBounds(group.getBounds().pad(0.25), { animate: true });
 
-    // Global click handler for map popup buttons
+    // Use event delegation - listen for clicks on the map container
     const handleClick = (e: Event) => {
       const target = e.target as HTMLElement;
       if (target.classList.contains("map-view-details-btn")) {
@@ -93,15 +96,17 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
         const business = valid.find((b) => b.id === businessId);
         if (business) {
           onSelect(business);
+          // Close all popups
           mapRef.current?.closePopup();
         }
       }
     };
 
-    mapRef.current.on("click", handleClick);
+    // Attach to document to catch clicks in popups
+    document.addEventListener("click", handleClick);
 
     return () => {
-      mapRef.current?.off("click", handleClick);
+      document.removeEventListener("click", handleClick);
     };
   }, [businesses, onSelect]);
 
