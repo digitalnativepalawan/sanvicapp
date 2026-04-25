@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FeedItem, type Business } from "@/components/FeedItem";
@@ -36,6 +36,29 @@ const Index = () => {
     }
   };
 
+  const fetchBusinesses = useCallback(async () => {
+    setLoading(true);
+    try {
+      let query = supabase.from("businesses").select("*");
+      
+      if (!isAdmin) {
+        query = query.eq("visible", true);
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: false });
+      
+      if (!error && data) {
+        setItems(data as Business[]);
+      } else if (error) {
+        console.error("Fetch error:", error);
+      }
+    } catch (err) {
+      console.error("Failed to fetch:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAdmin]);
+
   useEffect(() => {
     document.title = "San Vicente Live — Eat, Stay, Explore";
     const meta = document.querySelector('meta[name="description"]');
@@ -43,23 +66,33 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase
-        .from("businesses")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (!error && data) setItems(data as Business[]);
-      setLoading(false);
-    })();
-  }, []);
+    fetchBusinesses();
+  }, [fetchBusinesses, isAdmin]);
 
-  const visible = filter === "All" ? items : items.filter((b) => b.category === filter);
+  const handleSaved = useCallback((updatedBusiness: Business) => {
+    setItems(prev => prev.map(b => b.id === updatedBusiness.id ? updatedBusiness : b));
+    fetchBusinesses();
+  }, [fetchBusinesses]);
+
+  const handleDeleted = useCallback((id: string) => {
+    setItems(prev => prev.filter(b => b.id !== id));
+    fetchBusinesses();
+  }, [fetchBusinesses]);
+
+  // Sort: Featured items first, then by creation date (newest first)
+  const visible = (filter === "All" ? items : items.filter((b) => b.category === filter))
+    .sort((a, b) => {
+      // Featured items come first
+      if (a.featured && !b.featured) return -1;
+      if (!a.featured && b.featured) return 1;
+      // If both featured or both not featured, keep original order (newest first)
+      return 0;
+    });
 
   return (
     <AdminContext.Provider value={isAdmin}>
       <main className="min-h-screen bg-background text-foreground">
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
-          {/* Row 1: Logo + Actions */}
           <div className="px-5 pt-4 pb-3">
             <div className="flex items-center justify-between gap-3">
               <h1 className="font-display text-xl font-bold tracking-tight">
@@ -73,7 +106,6 @@ const Index = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setView((v) => (v === "feed" ? "map" : "feed"))}
-                  aria-label={view === "feed" ? "Switch to map view" : "Switch to feed view"}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
                 >
                   {view === "feed" ? <MapIcon className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
@@ -81,7 +113,6 @@ const Index = () => {
                 </button>
                 <button
                   onClick={handleAdminToggle}
-                  aria-label={isAdmin ? "Exit admin mode" : "Enter admin mode"}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
                 >
                   {isAdmin ? <LogOut className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
@@ -91,7 +122,6 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Row 2: Category buttons - Stacked grid, no horizontal scroll */}
           <div className="px-5 pb-4">
             <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
               {CATEGORIES.map((c) => (
@@ -130,7 +160,7 @@ const Index = () => {
                 key={b.id}
                 business={b}
                 priority={i === 0}
-                featured={i > 0 && i % 5 === 0}
+                featured={b.featured}
                 onOpen={(biz) => setActive(biz)}
                 onEdit={(biz) => setEditing(biz)}
               />
@@ -147,7 +177,8 @@ const Index = () => {
           business={editing}
           open={!!editing}
           onOpenChange={(o) => !o && setEditing(null)}
-          onSaved={(b) => setItems((arr) => arr.map((x) => (x.id === b.id ? b : x)))}
+          onSaved={handleSaved}
+          onDelete={handleDeleted}
         />
       </main>
     </AdminContext.Provider>
