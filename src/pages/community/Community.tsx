@@ -112,7 +112,7 @@ const Community = () => {
       {story && (
         <section className="px-5 mt-5">
           <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Featured story</h2>
-          <Link to="/community/blog">
+          <Link to={story.slug ? `/community/blog/${story.slug}` : "/community/blog"}>
             <Card className="overflow-hidden border-border/60">
               {story.cover_image && <img src={story.cover_image} alt={story.title} className="w-full h-40 object-cover" loading="lazy" />}
               <div className="p-4">

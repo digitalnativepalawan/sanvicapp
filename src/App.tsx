@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
 import Community from "./pages/community/Community.tsx";
 import { Games, Leaderboard, Blog } from "./pages/community/Stub.tsx";
+import BlogDetail from "./pages/community/BlogDetail.tsx";
 import AdminCommunity from "./pages/admin/AdminCommunity.tsx";
 import { AuthProvider } from "./contexts/AuthContext";
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/community/games" element={<Games />} />
             <Route path="/community/leaderboard" element={<Leaderboard />} />
             <Route path="/community/blog" element={<Blog />} />
+            <Route path="/community/blog/:slug" element={<BlogDetail />} />
             <Route path="/admin/community" element={<AdminCommunity />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
