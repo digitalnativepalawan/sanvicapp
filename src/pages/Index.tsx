@@ -6,7 +6,7 @@ import { BusinessSheet } from "@/components/BusinessSheet";
 import { EditBusinessModal } from "@/components/EditBusinessModal";
 import { MapView } from "@/components/MapView";
 import { AdminContext } from "@/lib/admin";
-import { Lock, LogOut, Map as MapIcon, List, Search, X } from "lucide-react";
+import { Lock, LogOut, Map as MapIcon, List, Search, X, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -149,6 +149,13 @@ const Index = () => {
                 >
                   {view === "feed" ? <MapIcon className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
                   {view === "feed" ? "Map" : "Feed"}
+                </button>
+                <button
+                  onClick={() => navigate(isAdmin ? "/admin/community" : "/community")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/15 text-accent hover:bg-accent/25 text-xs font-medium transition"
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  Community
                 </button>
                 <button
                   onClick={handleAdminToggle}
