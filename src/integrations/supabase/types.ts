@@ -450,7 +450,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_pebbles: {
+        Args: { uid: string; delta: number }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Sparkles, Trophy, Target, BookOpen, Gamepad2, LogOut, QrCode } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QrScannerSheet } from "@/components/QrScannerSheet";
 
 type Challenge = { id: string; title: string; description: string | null; reward_pebbles: number };
 type Story = { id: string; title: string; excerpt: string | null; cover_image: string | null; slug: string | null };
@@ -21,11 +22,12 @@ type FeedRow = {
 
 const Community = () => {
   const navigate = useNavigate();
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, profile, loading, signOut, refreshProfile } = useAuth();
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [story, setStory] = useState<Story | null>(null);
   const [feed, setFeed] = useState<FeedRow[]>([]);
   const [leaders, setLeaders] = useState<LeaderRow[]>([]);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth", { replace: true });
@@ -87,11 +89,21 @@ const Community = () => {
         </Card>
       </section>
 
-      <section className="px-5 mt-4 grid grid-cols-3 gap-2">
+      <section className="px-5 mt-4 grid grid-cols-4 gap-2">
         <Link to="/community/games"><Button variant="outline" className="w-full h-16 rounded-xl flex-col gap-1"><Gamepad2 className="h-4 w-4" /><span className="text-[10px]">Games</span></Button></Link>
         <Link to="/community/leaderboard"><Button variant="outline" className="w-full h-16 rounded-xl flex-col gap-1"><Trophy className="h-4 w-4" /><span className="text-[10px]">Ranks</span></Button></Link>
         <Link to="/community/blog"><Button variant="outline" className="w-full h-16 rounded-xl flex-col gap-1"><BookOpen className="h-4 w-4" /><span className="text-[10px]">Blog</span></Button></Link>
+        <Button variant="outline" className="w-full h-16 rounded-xl flex-col gap-1" onClick={() => setScannerOpen(true)}>
+          <QrCode className="h-4 w-4" />
+          <span className="text-[10px]">Scan</span>
+        </Button>
       </section>
+
+      <QrScannerSheet
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onPebblesAwarded={refreshProfile}
+      />
 
       {challenge && (
         <section className="px-5 mt-5">
