@@ -158,3 +158,10 @@
 .leaflet-popup-tip {
   background: hsl(var(--popover)) !important;
 }
+
+/* Keep Leaflet panes/controls below modals & drawers (Radix uses z-50) */
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom,
+.leaflet-control { z-index: 10 !important; }
+.leaflet-popup-pane { z-index: 20 !important; }
