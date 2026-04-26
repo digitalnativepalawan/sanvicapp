@@ -5,6 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import Auth from "./pages/Auth.tsx";
+import Community from "./pages/community/Community.tsx";
+import { Games, Leaderboard, Blog } from "./pages/community/Stub.tsx";
+import AdminCommunity from "./pages/admin/AdminCommunity.tsx";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
@@ -14,12 +19,20 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/admin" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/admin" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/community/games" element={<Games />} />
+            <Route path="/community/leaderboard" element={<Leaderboard />} />
+            <Route path="/community/blog" element={<Blog />} />
+            <Route path="/admin/community" element={<AdminCommunity />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
