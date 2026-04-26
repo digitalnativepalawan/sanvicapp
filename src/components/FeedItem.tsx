@@ -17,6 +17,13 @@ export interface Business {
   longitude?: number | null;
   featured?: boolean;
   visible?: boolean; // Added visible property
+  description?: string | null;
+  amenities?: string[] | null;
+  services?: string[] | null;
+  categories?: string[] | null;
+  website?: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
 }
 
 interface Props {
