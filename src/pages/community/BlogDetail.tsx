@@ -23,6 +23,7 @@ const BlogDetail = () => {
   const [story, setStory] = useState<BlogStory | null>(null);
   const [fetching, setFetching] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth", { replace: true });
@@ -32,13 +33,15 @@ const BlogDetail = () => {
     if (!user || !slug) return;
     (async () => {
       setFetching(true);
-      const { data } = await supabase
+      const { data, error: queryError } = await supabase
         .from("blog_stories")
         .select("id,title,cover_image,author,created_at,content")
         .eq("published", true)
         .eq("slug", slug)
         .maybeSingle();
-      if (data) {
+      if (queryError) {
+        setError(true);
+      } else if (data) {
         setStory(data as BlogStory);
         document.title = `${data.title} — San Vicente Live`;
       } else {
@@ -64,6 +67,18 @@ const BlogDetail = () => {
     return (
       <main className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center gap-4 px-5">
         <p className="text-lg font-semibold">Story not found</p>
+        <Link to="/community/blog" className="text-sm text-accent underline">
+          Back to Blog
+        </Link>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center gap-4 px-5">
+        <p className="text-lg font-semibold">Something went wrong</p>
+        <p className="text-sm text-muted-foreground">Unable to load the story. Please try again later.</p>
         <Link to="/community/blog" className="text-sm text-accent underline">
           Back to Blog
         </Link>
@@ -107,10 +122,12 @@ const BlogDetail = () => {
         </div>
 
         {safeContent ? (
-          <div
-            className="prose prose-sm dark:prose-invert mt-6 max-w-none"
-            dangerouslySetInnerHTML={{ __html: safeContent }}
-          />
+          <section aria-label="Article content">
+            <div
+              className="prose prose-sm dark:prose-invert mt-6 max-w-none"
+              dangerouslySetInnerHTML={{ __html: safeContent }}
+            />
+          </section>
         ) : (
           <p className="text-sm text-muted-foreground mt-6">No content available.</p>
         )}
