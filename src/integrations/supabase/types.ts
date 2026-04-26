@@ -34,6 +34,7 @@ export type Database = {
           season_status: string | null
           services: string[]
           tag: string | null
+          visible: boolean
           website: string | null
           whatsapp: string | null
           zone: string | null
@@ -57,6 +58,7 @@ export type Database = {
           season_status?: string | null
           services?: string[]
           tag?: string | null
+          visible?: boolean
           website?: string | null
           whatsapp?: string | null
           zone?: string | null
@@ -80,6 +82,7 @@ export type Database = {
           season_status?: string | null
           services?: string[]
           tag?: string | null
+          visible?: boolean
           website?: string | null
           whatsapp?: string | null
           zone?: string | null
