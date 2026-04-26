@@ -26,6 +26,13 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
   const tileRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const viewRef = useRef<"standard" | "satellite">("satellite");
+  const businessesRef = useRef<Business[]>(businesses);
+  const onSelectRef = useRef(onSelect);
+
+  useEffect(() => {
+    businessesRef.current = businesses;
+    onSelectRef.current = onSelect;
+  }, [businesses, onSelect]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -88,6 +95,23 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
       `;
 
       marker.bindPopup(popupHtml, { closeButton: false, maxWidth: 240 });
+      marker.on("popupopen", (e) => {
+        const node = (e.popup.getElement() as HTMLElement | null);
+        const btn = node?.querySelector(".map-view-details-btn") as HTMLButtonElement | null;
+        if (!btn) return;
+        const handler = (ev: Event) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          const id = btn.getAttribute("data-business-id");
+          const biz = businessesRef.current.find((x) => x.id === id);
+          if (biz) {
+            mapRef.current?.closePopup();
+            onSelectRef.current(biz);
+          }
+        };
+        btn.addEventListener("click", handler);
+        btn.addEventListener("touchend", handler);
+      });
       marker.addTo(group);
       markersRef.current.push(marker);
     });
@@ -95,34 +119,6 @@ export const MapView = ({ businesses, onSelect }: MapViewProps) => {
     group.addTo(mapRef.current);
     mapRef.current.fitBounds(group.getBounds().pad(0.25), { animate: true });
   }, [businesses]);
-
-  // Single, simple click handler
-  useEffect(() => {
-    const handlePopupClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const button = target.closest('.map-view-details-btn');
-      
-      if (button) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const businessId = button.getAttribute('data-business-id');
-        const business = businesses.find(b => b.id === businessId);
-        
-        if (business) {
-          onSelect(business);
-          mapRef.current?.closePopup();
-        }
-      }
-    };
-
-    // Attach to document
-    document.addEventListener('click', handlePopupClick);
-    
-    return () => {
-      document.removeEventListener('click', handlePopupClick);
-    };
-  }, [businesses, onSelect]);
 
   return (
     <div className="relative h-[calc(100vh-110px)] w-full bg-secondary">
