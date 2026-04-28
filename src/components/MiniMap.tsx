@@ -55,5 +55,3 @@ export const MiniMap = ({ lat, lng, label, onClick }: MiniMapProps) => {
     </button>
   );
 };
-  );
-};
