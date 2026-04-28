@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import useEmblaCarousel from "embla-carousel-react";
 import { Drawer, DrawerContent, DrawerOverlay, DrawerPortal } from "@/components/ui/drawer";
 import {
@@ -75,7 +76,14 @@ const amenityIcon = (label: string) => {
 };
 
 export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
+  const navigate = useNavigate();
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, align: "start" });
+  const openInAppMap = () => {
+    if (!business) return;
+    onOpenChange(false);
+    navigate(`/?view=map&focus=${business.id}`);
+  };
+
   const [selected, setSelected] = useState(0);
   const [snapCount, setSnapCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
@@ -368,21 +376,16 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
                     lat={business.latitude as number}
                     lng={business.longitude as number}
                     label={business.zone || business.name}
+                    onClick={openInAppMap}
                   />
-                  <div className="mt-2 flex items-center gap-2">
-                    <a
-                      href={directionsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-full bg-secondary text-foreground text-sm font-semibold active:scale-[0.98] transition"
-                    >
-                      <Navigation className="h-4 w-4" /> Directions
-                    </a>
-                    <span className="inline-flex items-center gap-1.5 px-3 h-11 rounded-full bg-secondary/60 text-muted-foreground text-xs">
-                      <MapPin className="h-3.5 w-3.5" />
-                      {business.latitude!.toFixed(4)}, {business.longitude!.toFixed(4)}
-                    </span>
-                  </div>
+                  <a
+                    href={directionsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 w-full inline-flex items-center justify-center gap-2 h-11 rounded-full bg-secondary text-foreground text-sm font-semibold active:scale-[0.98] transition"
+                  >
+                    <Navigation className="h-4 w-4" /> Directions
+                  </a>
                 </section>
               )}
 
