@@ -75,6 +75,17 @@ const Index = () => {
     fetchBusinesses();
   }, [fetchBusinesses, isAdmin]);
 
+  // Handle deep links like /?view=map&focus=<id>
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("view") === "map") setView("map");
+    const focusId = params.get("focus");
+    if (focusId && items.length) {
+      const biz = items.find((b) => b.id === focusId);
+      if (biz) setActive(biz);
+    }
+  }, [location.search, items]);
+
   const handleSaved = useCallback((updatedBusiness: Business) => {
     setItems(prev => prev.map(b => b.id === updatedBusiness.id ? updatedBusiness : b));
     fetchBusinesses();
