@@ -123,9 +123,9 @@ const Index = () => {
     <AdminContext.Provider value={isAdmin}>
       <main className="min-h-screen bg-background text-foreground">
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
-          <div className="px-5 pt-4 pb-3">
-            <div className="flex items-center justify-between gap-3">
-              <h1 className="font-display text-xl font-bold tracking-tight">
+          <div className="px-4 sm:px-5 pt-4 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <h1 className="font-display text-lg sm:text-xl font-bold tracking-tight">
                 San Vicente <span className="text-accent">Live</span>
                 {isAdmin && (
                   <span className="ml-2 px-2 py-0.5 rounded-full bg-accent/20 text-accent text-[10px] font-semibold uppercase tracking-wider align-middle">
@@ -133,33 +133,33 @@ const Index = () => {
                   </span>
                 )}
               </h1>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-1.5 w-full sm:w-auto">
                 {/* Search Button */}
                 <button
                   onClick={() => setSearchOpen(true)}
                   aria-label="Search"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition whitespace-nowrap"
                 >
                   <Search className="h-3.5 w-3.5" />
                   Search
                 </button>
                 <button
                   onClick={() => setView((v) => (v === "feed" ? "map" : "feed"))}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition whitespace-nowrap"
                 >
                   {view === "feed" ? <MapIcon className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
                   {view === "feed" ? "Map" : "Feed"}
                 </button>
                 <button
                   onClick={() => navigate(isAdmin ? "/admin/community" : "/community")}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/15 text-accent hover:bg-accent/25 text-xs font-medium transition"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-accent/15 text-accent hover:bg-accent/25 text-xs font-medium transition whitespace-nowrap"
                 >
                   <Users className="h-3.5 w-3.5" />
                   Community
                 </button>
                 <button
                   onClick={handleAdminToggle}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition whitespace-nowrap"
                 >
                   {isAdmin ? <LogOut className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
                   {isAdmin ? "Exit" : "Admin"}
