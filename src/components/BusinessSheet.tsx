@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { pickStockImage } from "@/lib/stockImages";
 import type { Business } from "./FeedItem";
+import { MiniMap } from "./MiniMap";
 
 interface Props {
   business: Business | null;
@@ -139,9 +140,6 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
 
   const hasCoords =
     typeof business.latitude === "number" && typeof business.longitude === "number";
-  const mapPreviewUrl = hasCoords
-    ? `https://staticmap.openstreetmap.de/staticmap.php?center=${business.latitude},${business.longitude}&zoom=15&size=600x240&markers=${business.latitude},${business.longitude},red-pushpin`
-    : null;
 
   const detailsGrid: { label: string; value: string }[] = [];
   if (business.tag) detailsGrid.push({ label: "Type", value: business.tag });
@@ -363,25 +361,28 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
               )}
 
               {/* Map preview */}
-              {hasCoords && mapPreviewUrl && (
+              {hasCoords && (
                 <section>
                   <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Location</h3>
-                  <a
-                    href={directionsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block relative rounded-2xl overflow-hidden bg-secondary active:scale-[0.99] transition"
-                  >
-                    <img src={mapPreviewUrl} alt="Map preview" className="w-full h-40 object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/70 to-transparent" />
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm text-foreground">
-                        <MapPin className="h-4 w-4" />
-                        <span className="truncate">{business.zone || "View on map"}</span>
-                      </div>
-                      <span className="text-[11px] px-2.5 py-1 rounded-full bg-foreground text-background font-semibold">Open</span>
-                    </div>
-                  </a>
+                  <MiniMap
+                    lat={business.latitude as number}
+                    lng={business.longitude as number}
+                    label={business.zone || business.name}
+                  />
+                  <div className="mt-2 flex items-center gap-2">
+                    <a
+                      href={directionsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-full bg-secondary text-foreground text-sm font-semibold active:scale-[0.98] transition"
+                    >
+                      <Navigation className="h-4 w-4" /> Directions
+                    </a>
+                    <span className="inline-flex items-center gap-1.5 px-3 h-11 rounded-full bg-secondary/60 text-muted-foreground text-xs">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {business.latitude!.toFixed(4)}, {business.longitude!.toFixed(4)}
+                    </span>
+                  </div>
                 </section>
               )}
 
