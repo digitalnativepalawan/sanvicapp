@@ -6,9 +6,10 @@ interface MiniMapProps {
   lat: number;
   lng: number;
   label?: string;
+  onClick?: () => void;
 }
 
-export const MiniMap = ({ lat, lng, label }: MiniMapProps) => {
+export const MiniMap = ({ lat, lng, label, onClick }: MiniMapProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
 
@@ -38,14 +39,21 @@ export const MiniMap = ({ lat, lng, label }: MiniMapProps) => {
   }, [lat, lng]);
 
   return (
-    <div className="relative w-full h-40 rounded-2xl overflow-hidden bg-secondary">
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative block w-full h-40 rounded-2xl overflow-hidden bg-secondary active:scale-[0.99] transition text-left"
+    >
       <div ref={ref} className="absolute inset-0" />
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-background/70 to-transparent" />
-      {label && (
-        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-          <span className="text-sm text-foreground truncate">{label}</span>
-        </div>
-      )}
-    </div>
+      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+        {label && <span className="text-sm text-foreground truncate">{label}</span>}
+        <span className="ml-auto text-[11px] px-2.5 py-1 rounded-full bg-foreground text-background font-semibold">
+          Open map
+        </span>
+      </div>
+    </button>
+  );
+};
   );
 };
