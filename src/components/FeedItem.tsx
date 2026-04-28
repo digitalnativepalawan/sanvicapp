@@ -40,17 +40,6 @@ const buildWhatsAppLink = (raw: string, name: string) => {
   return `https://wa.me/${num}?text=${msg}`;
 };
 
-const variantFor = (id: string) => {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  const zoom = 1 + ((h % 9) / 100);
-  const brightness = 0.9 + ((h >> 3) % 25) / 100;
-  const contrast = 0.95 + ((h >> 6) % 20) / 100;
-  const saturate = 0.95 + ((h >> 9) % 20) / 100;
-  const positions = ["50% 50%", "50% 35%", "50% 65%", "40% 50%", "60% 50%", "45% 40%", "55% 60%"];
-  const position = positions[h % positions.length];
-  return { zoom, brightness, contrast, saturate, position };
-};
 
 export const FeedItem = ({ business, priority, featured, onOpen, onEdit }: Props) => {
   const admin = useAdmin();
@@ -58,7 +47,6 @@ export const FeedItem = ({ business, priority, featured, onOpen, onEdit }: Props
     (business.images && business.images[0]) ||
     business.cover_image ||
     pickStockImage(business.category, business.id);
-  const v = variantFor(business.id);
   const baseH = featured ? "h-[78vh]" : "h-[58vh]";
   const tagLower = (business.tag || "").toLowerCase();
   const price = /budget|cheap/.test(tagLower) ? "₱" : /popular|featured|premium/.test(tagLower) ? "₱₱₱" : "₱₱";
@@ -74,11 +62,6 @@ export const FeedItem = ({ business, priority, featured, onOpen, onEdit }: Props
         loading={priority ? "eager" : "lazy"}
         width={1080}
         height={1080}
-        style={{
-          objectPosition: v.position,
-          filter: `brightness(${v.brightness}) contrast(${v.contrast}) saturate(${v.saturate})`,
-          transform: `scale(${v.zoom})`,
-        }}
         className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out"
       />
       <div className={`absolute inset-0 pointer-events-none ${featured ? "feed-overlay-strong" : "feed-overlay"}`} />
