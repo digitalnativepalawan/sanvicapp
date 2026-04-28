@@ -1,0 +1,1 @@
+CREATE POLICY "Anyone can delete businesses (admin mode)" ON public.businesses FOR DELETE USING (true);
