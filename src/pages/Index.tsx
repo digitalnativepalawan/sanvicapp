@@ -6,6 +6,7 @@ import { BusinessSheet } from "@/components/BusinessSheet";
 import { EditBusinessModal } from "@/components/EditBusinessModal";
 import { MapView } from "@/components/MapView";
 import { AdminContext } from "@/lib/admin";
+import { pickStockImage } from "@/lib/stockImages";
 import { Lock, LogOut, Map as MapIcon, List, Search, X, Users, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -443,28 +444,44 @@ const Index = () => {
                 </div>
               )}
               
-              {searchResults.map((business) => (
-                <button
-                  key={business.id}
-                  onClick={() => {
-                    setActive(business);
-                    setSearchOpen(false);
-                    setSearchQuery("");
-                    setSearchResults([]);
-                  }}
-                  className="w-full text-left p-3 rounded-xl hover:bg-secondary/50 transition-colors mb-2"
-                >
-                  <h3 className="font-semibold text-foreground">{business.name}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {business.zone || "San Vicente"} · {business.category}
-                  </p>
-                  {business.tag && (
-                    <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-secondary text-[10px] text-muted-foreground">
-                      {business.tag}
-                    </span>
-                  )}
-                </button>
-              ))}
+              {searchResults.map((business) => {
+                const thumb =
+                  (business.images && business.images[0]) ||
+                  business.cover_image ||
+                  pickStockImage(business.category, business.id);
+                return (
+                  <button
+                    key={business.id}
+                    onClick={() => {
+                      setActive(business);
+                      setSearchOpen(false);
+                      setSearchQuery("");
+                      setSearchResults([]);
+                    }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-secondary/50 transition-colors mb-2 flex items-start gap-3"
+                  >
+                    {/* Thumbnail */}
+                    <img
+                      src={thumb}
+                      alt={business.name}
+                      className="w-12 h-12 rounded-lg object-cover bg-secondary shrink-0"
+                      loading="lazy"
+                    />
+                    {/* Text content */}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-foreground truncate">{business.name}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {business.zone || "San Vicente"} · {business.category}
+                      </p>
+                      {business.tag && (
+                        <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-secondary text-[10px] text-muted-foreground">
+                          {business.tag}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </SheetContent>
         </Sheet>
