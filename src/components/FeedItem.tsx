@@ -121,9 +121,9 @@ export const FeedItem = ({ business, priority, featured, onOpen, onEdit }: Props
               href={`tel:${business.phone}`}
               onClick={(e) => e.stopPropagation()}
               aria-label={`Call ${business.name}`}
-              className="h-9 w-9 grid place-items-center rounded-full bg-background/40 backdrop-blur-md border border-foreground/15 text-foreground active:scale-95 transition"
+              className="h-11 w-11 grid place-items-center rounded-full bg-background/60 backdrop-blur-md border border-foreground/20 text-foreground hover:bg-background/80 active:scale-95 transition shadow-lg"
             >
-              <Phone className="h-4 w-4" />
+              <Phone className="h-5 w-5" />
             </a>
           )}
           {business.whatsapp && (
@@ -133,9 +133,9 @@ export const FeedItem = ({ business, priority, featured, onOpen, onEdit }: Props
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               aria-label={`WhatsApp ${business.name}`}
-              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-primary text-primary-foreground font-semibold text-[13px] active:scale-95 transition"
+              className="inline-flex items-center gap-1.5 h-11 px-4 rounded-full bg-primary text-primary-foreground font-semibold text-sm active:scale-95 transition shadow-lg shadow-primary/25"
             >
-              <MessageCircle className="h-4 w-4" strokeWidth={2.25} />
+              <MessageCircle className="h-5 w-5" strokeWidth={2.25} />
               <span>WhatsApp</span>
             </a>
           )}

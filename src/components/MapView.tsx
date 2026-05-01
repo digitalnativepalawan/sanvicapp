@@ -116,15 +116,15 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
           <p style="margin: 0 0 12px; font-size: 13px; color: #b8c5d0; line-height: 1.4;">
             ${description}
           </p>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
             ${b.whatsapp ? `
               <a
-                href="https://wa.me/${b.whatsapp.replace(/[^\\d]/g, '')}?text=${encodeURIComponent(`Hi ${b.name}! I found you on San Vicente Live.`)}"
+                href="https://wa.me/${b.whatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hi ${b.name}! I found you on San Vicente Live.`)}"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="map-popup-whatsapp-btn"
                 data-business-id="${b.id}"
-                style="width: 100%; padding: 11px; border-radius: 9999px; background: #25D366; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer; text-align: center; text-decoration: none; display: block; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);"
+                style="width: 100%; padding: 14px; border-radius: 9999px; background: #25D366; color: #fff; font-weight: 600; font-size: 15px; border: none; cursor: pointer; text-align: center; text-decoration: none; display: block; box-shadow: 0 6px 16px rgba(37, 211, 102, 0.35);"
               >
                 💬 WhatsApp Now
               </a>
@@ -134,7 +134,7 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
                 href="tel:${b.phone}"
                 class="map-popup-call-btn"
                 data-business-id="${b.id}"
-                style="width: 100%; padding: 11px; border-radius: 9999px; background: #2563eb; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer; text-align: center; text-decoration: none; display: block;"
+                style="width: 100%; padding: 14px; border-radius: 9999px; background: #2563eb; color: #fff; font-weight: 600; font-size: 15px; border: none; cursor: pointer; text-align: center; text-decoration: none; display: block; box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);"
               >
                 📞 Call Now
               </a>
@@ -142,7 +142,7 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
             <button
               class="map-view-details-btn"
               data-business-id="${b.id}"
-              style="width: 100%; padding: 10px; border-radius: 9999px; background: #0ea5e9; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer;"
+              style="width: 100%; padding: 12px; border-radius: 9999px; background: #0ea5e9; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer;"
             >
               View full details
             </button>
