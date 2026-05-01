@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FeedItem, type Business } from "@/components/FeedItem";
@@ -6,7 +6,7 @@ import { BusinessSheet } from "@/components/BusinessSheet";
 import { EditBusinessModal } from "@/components/EditBusinessModal";
 import { MapView } from "@/components/MapView";
 import { AdminContext } from "@/lib/admin";
-import { Lock, LogOut, Map as MapIcon, List, Search, X, Users } from "lucide-react";
+import { Lock, LogOut, Map as MapIcon, List, Search, X, Users, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -28,6 +28,13 @@ const Index = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Business[]>([]);
+  
+  // Pull-to-refresh state
+  const pullDistanceRef = useRef(0);
+  const isPullingRef = useRef(false);
+  const touchStartYRef = useRef(0);
+  const [pullProgress, setPullProgress] = useState(0);
+  const [canRefresh, setCanRefresh] = useState(false);
 
   const handleAdminToggle = () => {
     if (isAdmin) {
@@ -127,6 +134,36 @@ const Index = () => {
     setSearchQuery("");
     setSearchResults([]);
     setSearchOpen(false);
+  };
+
+  // Pull-to-refresh handlers
+  const PULL_THRESHOLD = 80; // pixels to trigger refresh
+  
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      touchStartYRef.current = e.touches[0].clientY;
+      isPullingRef.current = true;
+    }
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isPullingRef.current) return;
+    const currentY = e.touches[0].clientY;
+    const distance = Math.max(0, currentY - touchStartYRef.current);
+    pullDistanceRef.current = distance;
+    const progress = Math.min(distance / PULL_THRESHOLD, 1);
+    setPullProgress(progress);
+    setCanRefresh(distance >= PULL_THRESHOLD);
+  };
+  
+  const handleTouchEnd = async () => {
+    isPullingRef.current = false;
+    if (canRefresh) {
+      await fetchBusinesses();
+    }
+    setPullProgress(0);
+    setCanRefresh(false);
+    pullDistanceRef.current = 0;
   };
 
   // Sort: Featured items first
@@ -266,7 +303,30 @@ const Index = () => {
         {view === "map" ? (
           <MapView businesses={visible} selectedId={active?.id || null} onSelect={(b) => setActive(b)} />
         ) : (
-          <section className="flex flex-col gap-0.5 pb-10">
+          <section 
+            className="flex flex-col gap-0.5 pb-10"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Pull-to-refresh indicator */}
+            {pullProgress > 0 && (
+              <div 
+                className="flex items-center justify-center gap-2 py-3 text-sm transition-opacity"
+                style={{ 
+                  opacity: pullProgress,
+                  transform: `translateY(${pullProgress * 10}px)`
+                }}
+              >
+                <RefreshCw 
+                  className={`h-5 w-5 text-accent transition-transform ${canRefresh ? 'rotate-180' : ''}`}
+                  style={{ transform: canRefresh ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                />
+                <span className="text-muted-foreground font-medium">
+                  {canRefresh ? "Release to refresh" : "Pull to refresh"}
+                </span>
+              </div>
+            )}
             {loading && (
               <div className="flex flex-col gap-0.5">
                 {/* 3 skeleton cards matching FeedItem aspect ratios */}
