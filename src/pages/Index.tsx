@@ -598,8 +598,8 @@ const Index = () => {
                 featured={b.featured}
                 onOpen={(biz) => setActive(biz)}
                 onEdit={(biz) => setEditing(biz)}
-              )}
-            )}
+              />
+            ))}
             {/* Infinite scroll sentinel */}
             {hasMore && !loading && (
               <div ref={sentinelRef} className="h-4" aria-hidden="true" />
