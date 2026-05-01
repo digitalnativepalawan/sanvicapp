@@ -246,17 +246,30 @@ const Index = () => {
     pullDistanceRef.current = 0;
   };
 
-  // Sort: Featured items first
-  const visible = (filter === "All" ? items : items.filter((b) => b.category === filter))
-    .sort((a, b) => {
+  // Sort items based on sortBy
+  const visible = (filter === "All" ? items : items.filter((b) => b.category === filter));
+
+  const sortedVisible = [...visible].sort((a, b) => {
+    if (sortBy === "featured") {
       if (a.featured && !b.featured) return -1;
       if (!a.featured && b.featured) return 1;
       return 0;
-    });
+    }
+    if (sortBy === "newest") {
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    }
+    if (sortBy === "rating") {
+      return (b.rating || 0) - (a.rating || 0);
+    }
+    return 0;
+  });
 
-  return (
-    <AdminContext.Provider value={isAdmin}>
-      <main className="min-h-screen bg-background text-foreground">
+   return (
+     <AdminContext.Provider value={isAdmin}>
+       <div className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-0 focus-visible:left-0 focus-visible:z-50 focus-visible:p-4 focus-visible:bg-background focus-visible:border focus-visible:rounded-b-lg">
+         <a href="#main-content">Skip to main content</a>
+       </div>
+       <main className="min-h-screen bg-background text-foreground" id="main-content">
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
           <div className="px-4 sm:px-5 pt-4 pb-3">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -326,6 +339,9 @@ const Index = () => {
             </div>
           </div>
 
+          {/* Accessibility: live region for dynamic content changes */}
+          <div className="sr-only" aria-live="polite" aria-atomic="true" id="a11y-status" />
+
           <div className="px-5 pb-4">
             <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
               {CATEGORIES.map((c) => (
@@ -352,9 +368,10 @@ const Index = () => {
               <SheetTitle className="text-left font-display text-xl">Search</SheetTitle>
             </SheetHeader>
             <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <Input
                 placeholder="Search by name, location, or category..."
+                aria-label="Search listings by name, location, or category"
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-9 pr-9 py-6 bg-secondary/50 border-border rounded-xl"
@@ -423,7 +440,7 @@ const Index = () => {
         </Sheet>
 
         {view === "map" ? (
-          <MapView businesses={visible} selectedId={active?.id || null} onSelect={(b) => setActive(b)} />
+          <MapView businesses={sortedVisible} selectedId={active?.id || null} onSelect={(b) => setActive(b)} />
         ) : (
           <section 
             className="flex flex-col gap-0.5 pb-10"
@@ -435,6 +452,8 @@ const Index = () => {
             {pullProgress > 0 && (
               <div 
                 className="flex items-center justify-center gap-2 py-3 text-sm transition-opacity"
+                aria-live="polite"
+                aria-atomic="true"
                 style={{ 
                   opacity: pullProgress,
                   transform: `translateY(${pullProgress * 10}px)`
@@ -450,7 +469,11 @@ const Index = () => {
               </div>
             )}
             {loading && (
-              <div className="flex flex-col gap-0.5">
+              <div 
+                className="flex flex-col gap-0.5"
+                aria-busy="true"
+                aria-label="Loading listings"
+              >
                 {/* 3 skeleton cards matching FeedItem aspect ratios */}
                 {[0, 1, 2].map((i) => (
                   <div key={i} className="relative w-full overflow-hidden bg-secondary animate-pulse">
@@ -470,7 +493,11 @@ const Index = () => {
               </div>
             )}
             {!loading && error && (
-              <div className="h-[60vh] flex flex-col items-center justify-center text-center px-6">
+              <div 
+                className="h-[60vh] flex flex-col items-center justify-center text-center px-6"
+                role="alert"
+                aria-live="assertive"
+              >
                 <div className="w-16 h-16 rounded-full bg-destructive/10 grid place-items-center mb-4">
                   <X className="h-7 w-7 text-destructive" />
                 </div>
@@ -481,8 +508,11 @@ const Index = () => {
                 </Button>
               </div>
             )}
-            {!loading && visible.length === 0 && !error && (
-              <div className="h-[60vh] flex flex-col items-center justify-center text-center px-6">
+            {!loading && sortedVisible.length === 0 && !error && (
+              <div 
+                className="h-[60vh] flex flex-col items-center justify-center text-center px-6"
+                aria-live="polite"
+              >
                 <div className="w-16 h-16 rounded-full bg-secondary/50 grid place-items-center mb-4">
                   <Search className="h-7 w-7 text-muted-foreground" />
                 </div>
@@ -494,7 +524,7 @@ const Index = () => {
                 </p>
               </div>
             )}
-            {visible.map((b, i) => (
+            {sortedVisible.map((b, i) => (
               <FeedItem
                 key={b.id}
                 business={b}

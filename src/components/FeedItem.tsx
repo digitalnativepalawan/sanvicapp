@@ -54,7 +54,16 @@ export const FeedItem = ({ business, priority, featured, onOpen, onEdit }: Props
   return (
     <article
       onClick={() => onOpen?.(business)}
-      className={`relative w-full overflow-hidden cursor-pointer active:scale-[0.995] transition-transform duration-300 ${baseH}`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen?.(business);
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`View ${business.name}, ${business.category} in ${business.zone || 'San Vicente'}. ${business.whatsapp ? 'WhatsApp available' : ''}${business.phone ? ', Call available' : ''}`}
+      className={`relative w-full overflow-hidden cursor-pointer active:scale-[0.995] transition-transform duration-300 ${baseH} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`}
     >
       <img
         src={img}
