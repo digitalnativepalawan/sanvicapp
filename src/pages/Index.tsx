@@ -21,9 +21,22 @@ const Index = () => {
   const [items, setItems] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const perPage = 20;
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  const initialLoadDoneRef = useRef(false);
   const [filter, setFilter] = useState<Cat>("All");
   const [active, setActive] = useState<Business | null>(null);
   const [editing, setEditing] = useState<Business | null>(null);
+
+  // Reset pagination when filter changes
+  useEffect(() => {
+    setPage(1);
+    setItems([]);
+  }, [filter]);
   const [view, setView] = useState<"feed" | "map">("feed");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,6 +46,7 @@ const Index = () => {
   const pullDistanceRef = useRef(0);
   const isPullingRef = useRef(false);
   const touchStartYRef = useRef(0);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const [pullProgress, setPullProgress] = useState(0);
   const [canRefresh, setCanRefresh] = useState(false);
 
@@ -54,13 +68,28 @@ const Index = () => {
     setLoading(true);
     setError(null);
     try {
-      let query = supabase.from("businesses").select("*");
-      
+      // Get total count for pagination awareness
+      const { count } = await supabase
+        .from("businesses")
+        .select("*", { count: "exact", head: true });
+
+      if (count !== null) {
+        setTotalCount(count);
+        setHasMore(page * perPage < count);
+      }
+
+      let query = supabase
+        .from("businesses")
+        .select("*")
+        .order("featured", { ascending: false })
+        .order("created_at", { ascending: false })
+        .range((page - 1) * perPage, page * perPage - 1);
+
       if (!isAdmin) {
         query = query.eq("visible", true);
       }
       
-      const { data, error } = await query.order("created_at", { ascending: false });
+      const { data, error } = await query;
       
       if (error) {
         console.error("Fetch error:", error);
@@ -69,7 +98,11 @@ const Index = () => {
       }
       
       if (data) {
-        setItems(data as Business[]);
+        if (page === 1) {
+          setItems(data as Business[]);
+        } else {
+          setItems((prev) => [...prev, ...(data as Business[])]);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch:", err);
@@ -77,7 +110,7 @@ const Index = () => {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, page]);
 
   useEffect(() => {
     document.title = "San Vicente Live — Eat, Stay, Explore";
@@ -99,6 +132,24 @@ const Index = () => {
       if (biz) setActive(biz);
     }
   }, [location.search, items]);
+
+  // Infinite scroll: Load more when sentinel enters viewport
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          setPage((prev) => prev + 1);
+        }
+      },
+      { threshold: 0.1, rootMargin: "200px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loading]);
 
   const handleSaved = useCallback((updatedBusiness: Business) => {
     setItems(prev => prev.map(b => b.id === updatedBusiness.id ? updatedBusiness : b));
@@ -380,8 +431,18 @@ const Index = () => {
                 featured={b.featured}
                 onOpen={(biz) => setActive(biz)}
                 onEdit={(biz) => setEditing(biz)}
-              />
-            ))}
+              )}
+            )}
+            {/* Infinite scroll sentinel */}
+            {hasMore && !loading && (
+              <div ref={sentinelRef} className="h-4" aria-hidden="true" />
+            )}
+            {loading && page > 1 && (
+              <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Loading more…</span>
+              </div>
+            )}
           </section>
         )}
 
