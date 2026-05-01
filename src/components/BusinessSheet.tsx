@@ -4,7 +4,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import { Drawer, DrawerContent, DrawerOverlay, DrawerPortal } from "@/components/ui/drawer";
 import {
   Phone, MessageCircle, MapPin, Wifi, Waves, Snowflake, UtensilsCrossed, Compass, Car, Ship,
-  Globe, Facebook, Instagram, Heart, Navigation, Check,
+  Globe, Facebook, Instagram, Heart, Navigation, Check, X,
 } from "lucide-react";
 import { pickStockImage } from "@/lib/stockImages";
 import type { Business } from "./FeedItem";
@@ -89,6 +89,7 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
   const [scrolled, setScrolled] = useState(false);
   const [saved, setSaved] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [descExpanded, setDescExpanded] = useState(false);
 
   useEffect(() => {
     if (!business) return;
@@ -100,6 +101,7 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
       setSaved(false);
     }
     setScrolled(false);
+    setDescExpanded(false);
   }, [business?.id]);
 
   const toggleSaved = () => {
@@ -197,6 +199,15 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
                 <img src={gallery[0]} alt={business.name} className="absolute inset-0 h-full w-full object-cover" />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent pointer-events-none" />
+
+              {/* Close button — always visible on hero */}
+              <button
+                onClick={() => onOpenChange(false)}
+                aria-label="Close"
+                className="absolute top-4 left-4 z-20 h-9 w-9 grid place-items-center rounded-full bg-background/60 backdrop-blur-md border border-foreground/10 text-foreground active:scale-95 transition"
+              >
+                <X className="h-4 w-4" />
+              </button>
 
               {snapCount > 1 && (
                 <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-1.5 pointer-events-none">
@@ -317,7 +328,17 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
               {/* Description */}
               <section>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">About</h3>
-                <p className="text-sm text-foreground/80 leading-relaxed line-clamp-5">{d.description}</p>
+                <p className={`text-sm text-foreground/80 leading-relaxed ${descExpanded ? "" : "line-clamp-3"}`}>
+                  {d.description}
+                </p>
+                {d.description.length > 120 && (
+                  <button
+                    onClick={() => setDescExpanded((v) => !v)}
+                    className="text-xs text-accent font-medium mt-2"
+                  >
+                    {descExpanded ? "Show less" : "Read more"}
+                  </button>
+                )}
               </section>
 
               {/* Details grid */}
