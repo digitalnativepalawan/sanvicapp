@@ -20,6 +20,7 @@ const Index = () => {
   const isAdmin = location.pathname.startsWith("/admin");
   const [items, setItems] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Cat>("All");
   const [active, setActive] = useState<Business | null>(null);
   const [editing, setEditing] = useState<Business | null>(null);
@@ -44,6 +45,7 @@ const Index = () => {
 
   const fetchBusinesses = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       let query = supabase.from("businesses").select("*");
       
@@ -53,13 +55,18 @@ const Index = () => {
       
       const { data, error } = await query.order("created_at", { ascending: false });
       
-      if (!error && data) {
-        setItems(data as Business[]);
-      } else if (error) {
+      if (error) {
         console.error("Fetch error:", error);
+        setError("Failed to load listings. Please check your connection and try again.");
+        return;
+      }
+      
+      if (data) {
+        setItems(data as Business[]);
       }
     } catch (err) {
       console.error("Failed to fetch:", err);
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -261,13 +268,48 @@ const Index = () => {
         ) : (
           <section className="flex flex-col gap-0.5 pb-10">
             {loading && (
-              <div className="h-[72vh] flex items-center justify-center text-muted-foreground">
-                Loading…
+              <div className="flex flex-col gap-0.5">
+                {/* 3 skeleton cards matching FeedItem aspect ratios */}
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="relative w-full overflow-hidden bg-secondary animate-pulse">
+                    {/* Skeleton image */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-secondary via-muted to-secondary opacity-30" />
+                    {/* Skeleton text overlay */}
+                    <div className="absolute top-0 inset-x-0 p-4 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="h-6 bg-muted/50 rounded w-3/4 mb-2" />
+                        <div className="h-3 bg-muted/30 rounded w-1/2" />
+                      </div>
+                    </div>
+                    {/* Bottom placeholder bar */}
+                    <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-background/90 via-background/60 to-transparent" />
+                  </div>
+                ))}
               </div>
             )}
-            {!loading && visible.length === 0 && (
-              <div className="h-[60vh] flex items-center justify-center text-muted-foreground">
-                Nothing here yet.
+            {!loading && error && (
+              <div className="h-[60vh] flex flex-col items-center justify-center text-center px-6">
+                <div className="w-16 h-16 rounded-full bg-destructive/10 grid place-items-center mb-4">
+                  <X className="h-7 w-7 text-destructive" />
+                </div>
+                <h3 className="font-display text-lg font-semibold text-foreground mb-1.5">Something went wrong</h3>
+                <p className="text-sm text-muted-foreground mb-5 max-w-xs">{error}</p>
+                <Button onClick={fetchBusinesses} className="gap-2">
+                  Try again
+                </Button>
+              </div>
+            )}
+            {!loading && visible.length === 0 && !error && (
+              <div className="h-[60vh] flex flex-col items-center justify-center text-center px-6">
+                <div className="w-16 h-16 rounded-full bg-secondary/50 grid place-items-center mb-4">
+                  <Search className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <h3 className="font-display text-lg font-semibold text-foreground mb-1.5">No listings found</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  {filter !== "All"
+                    ? `No ${filter.toLowerCase()} businesses in this area yet.`
+                    : "No businesses have been added yet."}
+                </p>
               </div>
             )}
             {visible.map((b, i) => (
