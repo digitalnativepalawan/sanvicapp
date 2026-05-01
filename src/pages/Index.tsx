@@ -41,6 +41,7 @@ const Index = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Business[]>([]);
+  const [searchCategory, setSearchCategory] = useState<string>("All");
   
   // Pull-to-refresh state
   const pullDistanceRef = useRef(0);
@@ -164,26 +165,32 @@ const Index = () => {
   // Handle search
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    if (!query.trim()) {
+    
+    // If both query empty and category is All, clear results
+    if (!query.trim() && searchCategory === "All") {
       setSearchResults([]);
       return;
     }
     
     const results = items.filter(business => {
-      const searchLower = query.toLowerCase();
-      return (
-        business.name.toLowerCase().includes(searchLower) ||
-        (business.zone && business.zone.toLowerCase().includes(searchLower)) ||
-        (business.tag && business.tag.toLowerCase().includes(searchLower)) ||
-        business.category.toLowerCase().includes(searchLower)
-      );
+      const matchesText = !query.trim() ||
+        business.name.toLowerCase().includes(query.toLowerCase()) ||
+        (business.zone && business.zone.toLowerCase().includes(query.toLowerCase())) ||
+        (business.tag && business.tag.toLowerCase().includes(query.toLowerCase())) ||
+        business.category.toLowerCase().includes(query.toLowerCase());
+      
+      const matchesCategory = searchCategory === "All" || business.category === searchCategory;
+      
+      return matchesText && matchesCategory;
     });
+    
     setSearchResults(results);
   };
 
   const clearSearch = () => {
     setSearchQuery("");
     setSearchResults([]);
+    setSearchCategory("All");
     setSearchOpen(false);
   };
 
@@ -316,6 +323,25 @@ const Index = () => {
                   <X className="h-4 w-4 text-muted-foreground" />
                 </button>
               )}
+            </div>
+            
+            {/* Category filter chips for search */}
+            <div className="mb-4 -mx-5 px-5">
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setSearchCategory(c)}
+                    className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
+                      searchCategory === c
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
             </div>
             
             <div className="overflow-y-auto h-[calc(85vh-140px)]">
