@@ -89,6 +89,7 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
   const [scrolled, setScrolled] = useState(false);
   const [saved, setSaved] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [descExpanded, setDescExpanded] = useState(false);
 
   useEffect(() => {
     if (!business) return;
@@ -326,7 +327,19 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
               {/* Description */}
               <section>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">About</h3>
-                <p className="text-sm text-foreground/80 leading-relaxed line-clamp-5">{d.description}</p>
+                <div>
+                  <p className={`text-sm text-foreground/80 leading-relaxed ${descExpanded ? "" : "line-clamp-3"}`}>
+                    {d.description}
+                  </p>
+                  {d.description.length > 100 && (
+                    <button
+                      onClick={() => setDescExpanded(!descExpanded)}
+                      className="text-xs text-accent hover:underline mt-1.5 font-medium"
+                    >
+                      {descExpanded ? "Show less" : "Read more"}
+                    </button>
+                  )}
+                </div>
               </section>
 
               {/* Details grid */}
