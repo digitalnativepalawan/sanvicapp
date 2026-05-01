@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { FeedItem, type Business } from "@/components/FeedItem";
@@ -7,28 +7,20 @@ import { EditBusinessModal } from "@/components/EditBusinessModal";
 import { MapView } from "@/components/MapView";
 import { AdminContext } from "@/lib/admin";
 import { pickStockImage } from "@/lib/stockImages";
-import { Lock, LogOut, Map as MapIcon, List, Search, X, Users } from "lucide-react";
+import { Lock, LogOut, Map as MapIcon, List, Search, X, Users, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const CATEGORIES = ["All", "Eat", "Experience", "Stay", "Travel"] as const;
-type Cat = (typeof CATEGORIES)[number];
-
-const CATEGORY_EMOJIS: Record<Cat, string> = {
+const CATEGORY_EMOJI: Record<typeof CATEGORIES[number], string> = {
   All: "🌴",
   Eat: "🍽️",
   Experience: "🏄",
   Stay: "🏡",
   Travel: "🚤",
 };
-
-const FeedSkeleton = () => (
-  <div className="flex flex-col gap-0.5">
-    {([78, 58, 58] as const).map((vh, i) => (
-      <div key={i} style={{ height: `${vh}vh` }} className="w-full bg-secondary animate-pulse" />
-    ))}
-  </div>
-);
+type Cat = (typeof CATEGORIES)[number];
 
 const Index = () => {
   const location = useLocation();
@@ -36,13 +28,48 @@ const Index = () => {
   const isAdmin = location.pathname.startsWith("/admin");
   const [items, setItems] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const perPage = 20;
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  const initialLoadDoneRef = useRef(false);
   const [filter, setFilter] = useState<Cat>("All");
+  const [sortBy, setSortBy] = useState<"featured" | "newest" | "rating">("featured");
   const [active, setActive] = useState<Business | null>(null);
   const [editing, setEditing] = useState<Business | null>(null);
+
+  // Reset pagination when filter changes
+  useEffect(() => {
+    setPage(1);
+    setItems([]);
+  }, [filter]);
+  
+  // Reset pagination when sort changes
+  useEffect(() => {
+    setPage(1);
+    setItems([]);
+  }, [sortBy]);
   const [view, setView] = useState<"feed" | "map">("feed");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Business[]>([]);
+  const [searchCategory, setSearchCategory] = useState<string>("All");
+  
+  // Geolocation state
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  
+  // Pull-to-refresh state
+  const pullDistanceRef = useRef(0);
+  const isPullingRef = useRef(false);
+  const touchStartYRef = useRef(0);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [pullProgress, setPullProgress] = useState(0);
+  const [canRefresh, setCanRefresh] = useState(false);
 
   const handleAdminToggle = () => {
     if (isAdmin) {
@@ -60,18 +87,66 @@ const Index = () => {
 
   const fetchBusinesses = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      let query = supabase.from("businesses").select("*");
-      if (!isAdmin) query = query.eq("visible", true);
-      const { data, error } = await query.order("created_at", { ascending: false });
-      if (!error && data) setItems(data as Business[]);
-      else if (error) console.error("Fetch error:", error);
+      // Get total count for pagination awareness
+      const { count } = await supabase
+        .from("businesses")
+        .select("*", { count: "exact", head: true });
+
+      if (count !== null) {
+        setTotalCount(count);
+        setHasMore(page * perPage < count);
+      }
+
+      let query = supabase
+        .from("businesses")
+        .select("*")
+        .order("featured", { ascending: false })
+        .order("created_at", { ascending: false })
+        .range((page - 1) * perPage, page * perPage - 1);
+
+      if (sortBy === "newest") {
+        query = supabase
+          .from("businesses")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .range((page - 1) * perPage, page * perPage - 1);
+      } else if (sortBy === "rating") {
+        query = supabase
+          .from("businesses")
+          .select("*")
+          .order("rating", { ascending: false })
+          .order("featured", { ascending: false })
+          .range((page - 1) * perPage, page * perPage - 1);
+      }
+
+      if (!isAdmin) {
+        query = query.eq("visible", true);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error("Fetch error:", error);
+        setError("Failed to load listings. Please check your connection and try again.");
+        return;
+      }
+      
+      if (data) {
+        if (page === 1) {
+          setItems(data as Business[]);
+        } else {
+          setItems((prev) => [...prev, ...(data as Business[])]);
+        }
+      }
     } catch (err) {
       console.error("Failed to fetch:", err);
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, page, sortBy]);
 
   useEffect(() => {
     document.title = "San Vicente Live — Eat, Stay, Explore";
@@ -83,6 +158,7 @@ const Index = () => {
     fetchBusinesses();
   }, [fetchBusinesses, isAdmin]);
 
+  // Handle deep links like /?view=map&focus=<id>
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get("view") === "map") setView("map");
@@ -92,6 +168,24 @@ const Index = () => {
       if (biz) setActive(biz);
     }
   }, [location.search, items]);
+
+  // Infinite scroll: Load more when sentinel enters viewport
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore || loading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          setPage((prev) => prev + 1);
+        }
+      },
+      { threshold: 0.1, rootMargin: "200px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loading]);
 
   const handleSaved = useCallback((updatedBusiness: Business) => {
     setItems(prev => prev.map(b => b.id === updatedBusiness.id ? updatedBusiness : b));
@@ -103,73 +197,199 @@ const Index = () => {
     fetchBusinesses();
   }, [fetchBusinesses]);
 
+  // Handle search
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    if (!query.trim()) { setSearchResults([]); return; }
-    const q = query.toLowerCase();
-    const results = items.filter(b =>
-      b.name.toLowerCase().includes(q) ||
-      (b.zone && b.zone.toLowerCase().includes(q)) ||
-      (b.tag && b.tag.toLowerCase().includes(q)) ||
-      b.category.toLowerCase().includes(q)
-    );
+    
+    // If both query empty and category is All, clear results
+    if (!query.trim() && searchCategory === "All") {
+      setSearchResults([]);
+      return;
+    }
+    
+    const results = items.filter(business => {
+      const matchesText = !query.trim() ||
+        business.name.toLowerCase().includes(query.toLowerCase()) ||
+        (business.zone && business.zone.toLowerCase().includes(query.toLowerCase())) ||
+        (business.tag && business.tag.toLowerCase().includes(query.toLowerCase())) ||
+        business.category.toLowerCase().includes(query.toLowerCase());
+      
+      const matchesCategory = searchCategory === "All" || business.category === searchCategory;
+      
+      return matchesText && matchesCategory;
+    });
+    
     setSearchResults(results);
   };
 
   const clearSearch = () => {
     setSearchQuery("");
     setSearchResults([]);
+    setSearchCategory("All");
     setSearchOpen(false);
   };
 
-  const visible = (filter === "All" ? items : items.filter((b) => b.category === filter))
-    .sort((a, b) => {
+  // Pull-to-refresh handlers
+  const PULL_THRESHOLD = 80; // pixels to trigger refresh
+  
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      touchStartYRef.current = e.touches[0].clientY;
+      isPullingRef.current = true;
+    }
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isPullingRef.current) return;
+    const currentY = e.touches[0].clientY;
+    const distance = Math.max(0, currentY - touchStartYRef.current);
+    pullDistanceRef.current = distance;
+    const progress = Math.min(distance / PULL_THRESHOLD, 1);
+    setPullProgress(progress);
+    setCanRefresh(distance >= PULL_THRESHOLD);
+  };
+  
+  const handleTouchEnd = async () => {
+    isPullingRef.current = false;
+    if (canRefresh) {
+      await fetchBusinesses();
+    }
+    setPullProgress(0);
+    setCanRefresh(false);
+    pullDistanceRef.current = 0;
+  };
+
+  // Geolocation: Get user position and center map
+  const handleLocateMe = useCallback(async () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser");
+      return;
+    }
+    
+    setIsLocating(true);
+    setLocationError(null);
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation([latitude, longitude]);
+        setIsLocating(false);
+      },
+      (err) => {
+        let msg = "Unable to get your location";
+        if (err.code === 1) msg = "Location access denied. Please enable location permissions.";
+        if (err.code === 2) msg = "Position unavailable. Try again.";
+        if (err.code === 3) msg = "Location request timed out.";
+        setLocationError(msg);
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }, []);
+
+  // Sort: Featured items first
+  const visible = (filter === "All" ? items : items.filter((b) => b.category === filter));
+
+  const sortedVisible = [...visible].sort((a, b) => {
+    if (sortBy === "featured") {
       if (a.featured && !b.featured) return -1;
       if (!a.featured && b.featured) return 1;
       return 0;
-    });
+    }
+    if (sortBy === "newest") {
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    }
+    if (sortBy === "rating") {
+      return (b.rating || 0) - (a.rating || 0);
+    }
+    return 0;
+  });
 
-  return (
-    <AdminContext.Provider value={isAdmin}>
-      <main className="min-h-screen bg-background text-foreground">
-        {/* Header */}
+   return (
+     <AdminContext.Provider value={isAdmin}>
+       <div className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-0 focus-visible:left-0 focus-visible:z-50 focus-visible:p-4 focus-visible:bg-background focus-visible:border focus-visible:rounded-b-lg">
+         <a href="#main-content">Skip to main content</a>
+       </div>
+       <main className="min-h-screen bg-background text-foreground pb-20" id="main-content">
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
-          <div className="flex items-center justify-between px-5 pt-4 pb-3">
-            <h1 className="font-display text-lg sm:text-xl font-bold tracking-tight">
-              San Vicente <span className="text-accent">Live</span>
-              {isAdmin && (
-                <span className="ml-2 px-2 py-0.5 rounded-full bg-accent/20 text-accent text-[10px] font-semibold uppercase tracking-wider align-middle">
-                  Admin
-                </span>
-              )}
-            </h1>
-            <button
-              onClick={handleAdminToggle}
-              aria-label={isAdmin ? "Exit admin" : "Admin login"}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition"
-            >
-              {isAdmin ? <LogOut className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
-              {isAdmin ? "Exit" : "Admin"}
-            </button>
+          <div className="px-4 sm:px-5 pt-4 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <h1 className="font-display text-lg sm:text-xl font-bold tracking-tight">
+                San Vicente <span className="text-accent">Live</span>
+                {isAdmin && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-accent/20 text-accent text-[10px] font-semibold uppercase tracking-wider align-middle">
+                    Admin
+                  </span>
+                )}
+              </h1>
+              <div className="flex flex-wrap items-center justify-end gap-1.5 w-full sm:w-auto">
+                {/* Search Button — stays in header for quick access */}
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  aria-label="Search"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition whitespace-nowrap"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  Search
+                </button>
+                <button
+                  onClick={handleAdminToggle}
+                  aria-label={isAdmin ? "Exit admin mode" : "Admin mode"}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition whitespace-nowrap"
+                >
+                  {isAdmin ? <LogOut className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                  {isAdmin ? "Exit" : "Admin"}
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Category pills — horizontal scroll with emoji */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar px-5 pb-4">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c}
-                onClick={() => setFilter(c)}
-                className={`shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition ${
-                  filter === c
-                    ? "bg-foreground text-background"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span role="img" aria-hidden="true">{CATEGORY_EMOJIS[c]}</span>
-                {c}
-              </button>
-            ))}
+          {/* Sort Options */}
+          <div className="px-5 pb-3 border-b border-border/30">
+            <div className="flex gap-2">
+              {[
+                { value: "featured", label: "Featured" },
+                { value: "newest", label: "Newest" },
+                { value: "rating", label: "Rating" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSortBy(option.value as any)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition whitespace-nowrap ${
+                    sortBy === option.value
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-secondary text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Category filter pills — horizontal scroll, emoji icons */}
+          <div className="px-5 pb-4">
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar -mx-1">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setFilter(c)}
+                  aria-pressed={filter === c}
+                  className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition active:scale-95 ${
+                    filter === c
+                      ? "bg-foreground text-background"
+                      : "bg-secondary text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span aria-hidden="true">{CATEGORY_EMOJI[c]}</span>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Accessibility: live region for dynamic content changes */}
+          <div className="sr-only" aria-live="polite" aria-atomic="true" id="a11y-status" />
         </header>
 
         {/* Search Sheet */}
@@ -179,57 +399,94 @@ const Index = () => {
               <SheetTitle className="text-left font-display text-xl">Search</SheetTitle>
             </SheetHeader>
             <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <Input
-                placeholder="Search by name, location, or category…"
+                placeholder="Search by name, location, or category..."
+                aria-label="Search listings by name, location, or category"
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-9 pr-9 py-6 bg-secondary/50 border-border rounded-xl"
                 autoFocus
               />
               {searchQuery && (
-                <button onClick={() => handleSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+                <button
+                  onClick={() => handleSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                >
                   <X className="h-4 w-4 text-muted-foreground" />
                 </button>
               )}
             </div>
-
-            <div className="overflow-y-auto h-[calc(85vh-152px)]">
-              {!searchQuery && (
-                <p className="text-sm text-muted-foreground text-center pt-10">
-                  Start typing to search listings…
-                </p>
-              )}
+            
+            {/* Category filter chips for search */}
+            <div className="mb-4 -mx-5 px-5">
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setSearchCategory(c)}
+                    className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
+                      searchCategory === c
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="overflow-y-auto h-[calc(85vh-140px)]">
+              {/* Search empty state */}
               {searchQuery && searchResults.length === 0 && (
-                <div className="text-center text-muted-foreground py-10">
-                  No results for "<span className="text-foreground">{searchQuery}</span>"
+                <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+                  <div className="text-5xl mb-3" aria-hidden="true">🔍</div>
+                  <h3 className="font-display text-lg font-semibold text-foreground mb-1.5">No matches found</h3>
+                  <p className="text-sm text-muted-foreground max-w-xs mb-4">
+                    We couldn't find anything matching "{searchQuery}". Try different keywords.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => { setSearchQuery(""); setSearchResults([]); }}>
+                    Clear search
+                  </Button>
                 </div>
               )}
+
               {searchResults.map((business) => {
-                const thumb = business.images?.[0] || business.cover_image || pickStockImage(business.category, business.id);
+                const thumb =
+                  (business.images && business.images[0]) ||
+                  business.cover_image ||
+                  pickStockImage(business.category, business.id);
                 return (
                   <button
                     key={business.id}
-                    onClick={() => { setActive(business); clearSearch(); }}
-                    className="w-full text-left flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 active:bg-secondary/70 transition-colors mb-1"
+                    onClick={() => {
+                      setActive(business);
+                      setSearchOpen(false);
+                      setSearchQuery("");
+                      setSearchResults([]);
+                    }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-secondary/50 transition-colors mb-2 flex items-start gap-3"
                   >
+                    {/* Thumbnail */}
                     <img
                       src={thumb}
                       alt={business.name}
-                      className="h-12 w-12 rounded-xl object-cover shrink-0 bg-secondary"
+                      className="w-12 h-12 rounded-lg object-cover bg-secondary shrink-0"
+                      loading="lazy"
                     />
+                    {/* Text content */}
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-foreground truncate">{business.name}</h3>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {business.zone || "San Vicente"} · {business.category}
                       </p>
                       {business.tag && (
-                        <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-secondary text-[10px] text-muted-foreground">
+                        <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-secondary text-[10px] text-muted-foreground">
                           {business.tag}
                         </span>
                       )}
                     </div>
-                    <span className="text-muted-foreground/40 text-lg shrink-0">›</span>
                   </button>
                 );
               })}
@@ -237,27 +494,103 @@ const Index = () => {
           </SheetContent>
         </Sheet>
 
-        {/* Main content */}
         {view === "map" ? (
-          <MapView businesses={visible} onSelect={(b) => setActive(b)} />
+          <MapView businesses={sortedVisible} selectedId={active?.id || null} onSelect={(b) => setActive(b)} />
         ) : (
-          <section className="flex flex-col gap-0.5 pb-28">
-            {loading && <FeedSkeleton />}
-            {!loading && visible.length === 0 && (
-              <div className="h-[60vh] flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                <span className="text-4xl" role="img" aria-hidden="true">🌴</span>
-                <p className="text-sm font-medium">Nothing here yet.</p>
-                {filter !== "All" && (
-                  <button
-                    onClick={() => setFilter("All")}
-                    className="text-xs text-accent underline underline-offset-2"
-                  >
+          <section 
+            className="flex flex-col gap-0.5 pb-10"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Pull-to-refresh indicator */}
+            {pullProgress > 0 && (
+              <div 
+                className="flex items-center justify-center gap-2 py-3 text-sm transition-opacity"
+                aria-live="polite"
+                aria-atomic="true"
+                style={{ 
+                  opacity: pullProgress,
+                  transform: `translateY(${pullProgress * 10}px)`
+                }}
+              >
+                <RefreshCw 
+                  className={`h-5 w-5 text-accent transition-transform ${canRefresh ? 'rotate-180' : ''}`}
+                  style={{ transform: canRefresh ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                />
+                <span className="text-muted-foreground font-medium">
+                  {canRefresh ? "Release to refresh" : "Pull to refresh"}
+                </span>
+              </div>
+            )}
+            {loading && (
+              <div 
+                className="flex flex-col gap-0.5"
+                aria-busy="true"
+                aria-label="Loading listings"
+              >
+                {/* 3 skeleton cards matching FeedItem aspect ratios */}
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="relative w-full overflow-hidden bg-secondary animate-pulse">
+                    {/* Skeleton image */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-secondary via-muted to-secondary opacity-30" />
+                    {/* Skeleton text overlay */}
+                    <div className="absolute top-0 inset-x-0 p-4 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="h-6 bg-muted/50 rounded w-3/4 mb-2" />
+                        <div className="h-3 bg-muted/30 rounded w-1/2" />
+                      </div>
+                    </div>
+                    {/* Bottom placeholder bar */}
+                    <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-background/90 via-background/60 to-transparent" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {!loading && error && (
+              <div 
+                className="h-[60vh] flex flex-col items-center justify-center text-center px-6"
+                role="alert"
+                aria-live="assertive"
+              >
+                <div className="w-16 h-16 rounded-full bg-destructive/10 grid place-items-center mb-4">
+                  <X className="h-7 w-7 text-destructive" />
+                </div>
+                <h3 className="font-display text-lg font-semibold text-foreground mb-1.5">Something went wrong</h3>
+                <p className="text-sm text-muted-foreground mb-5 max-w-xs">{error}</p>
+                <Button onClick={fetchBusinesses} className="gap-2">
+                  Try again
+                </Button>
+              </div>
+            )}
+            {!loading && sortedVisible.length === 0 && !error && (
+              <div
+                className="min-h-[50vh] flex flex-col items-center justify-center text-center px-6"
+                aria-live="polite"
+              >
+                <div className="text-6xl mb-4" aria-hidden="true">
+                  {filter !== "All" ? "🏝️" : "🌴"}
+                </div>
+                <h3 className="font-display text-lg font-semibold text-foreground mb-1.5">
+                  {filter !== "All" ? `No ${filter} listings yet` : "No businesses yet"}
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-xs mb-5">
+                  {filter !== "All"
+                    ? `There are no ${filter.toLowerCase()} businesses in San Vicente at the moment.`
+                    : "Be the first to add a business in San Vicente!"}
+                </p>
+                {filter !== "All" ? (
+                  <Button variant="outline" size="sm" onClick={() => setFilter("All")}>
                     Show all listings
-                  </button>
+                  </Button>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    Check back soon
+                  </div>
                 )}
               </div>
             )}
-            {!loading && visible.map((b, i) => (
+            {sortedVisible.map((b, i) => (
               <FeedItem
                 key={b.id}
                 business={b}
@@ -267,48 +600,18 @@ const Index = () => {
                 onEdit={(biz) => setEditing(biz)}
               />
             ))}
+            {/* Infinite scroll sentinel */}
+            {hasMore && !loading && (
+              <div ref={sentinelRef} className="h-4" aria-hidden="true" />
+            )}
+            {loading && page > 1 && (
+              <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Loading more…</span>
+              </div>
+            )}
           </section>
         )}
-
-        {/* Bottom navigation bar */}
-        <nav className="fixed bottom-0 inset-x-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border/40">
-          <div className="flex items-center justify-around px-2 pt-2 pb-[max(12px,env(safe-area-inset-bottom))] max-w-md mx-auto">
-            <button
-              onClick={() => setView("feed")}
-              className={`flex flex-col items-center gap-1 px-5 py-1.5 rounded-xl transition-colors ${
-                view === "feed" && !searchOpen ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <List className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Feed</span>
-            </button>
-            <button
-              onClick={() => setView("map")}
-              className={`flex flex-col items-center gap-1 px-5 py-1.5 rounded-xl transition-colors ${
-                view === "map" && !searchOpen ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <MapIcon className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Map</span>
-            </button>
-            <button
-              onClick={() => setSearchOpen(true)}
-              className={`flex flex-col items-center gap-1 px-5 py-1.5 rounded-xl transition-colors ${
-                searchOpen ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Search className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Search</span>
-            </button>
-            <button
-              onClick={() => navigate(isAdmin ? "/admin/community" : "/community")}
-              className="flex flex-col items-center gap-1 px-5 py-1.5 rounded-xl text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Users className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Community</span>
-            </button>
-          </div>
-        </nav>
 
         <BusinessSheet
           business={active}
@@ -323,6 +626,75 @@ const Index = () => {
           onDelete={handleDeleted}
         />
       </main>
+
+      {/* Bottom navigation bar — native app feel, thumb-friendly */}
+      <nav
+        role="tablist"
+        aria-label="Main navigation"
+        className="fixed bottom-0 inset-x-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border/40 pb-safe pt-2"
+      >
+        <div className="flex items-center justify-around max-w-md mx-auto">
+          {/* Feed */}
+          <button
+            role="tab"
+            aria-selected={view === "feed" && !searchOpen}
+            aria-label="Feed view"
+            onClick={() => { setView("feed"); setSearchOpen(false); }}
+            className={`flex flex-col items-center gap-0.5 px-4 py-2 transition active:scale-95 ${
+              view === "feed" && !searchOpen
+                ? "text-accent"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <List className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Feed</span>
+          </button>
+
+          {/* Map */}
+          <button
+            role="tab"
+            aria-selected={view === "map"}
+            aria-label="Map view"
+            onClick={() => setView("map")}
+            className={`flex flex-col items-center gap-0.5 px-4 py-2 transition active:scale-95 ${
+              view === "map"
+                ? "text-accent"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <MapIcon className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Map</span>
+          </button>
+
+          {/* Search */}
+          <button
+            role="tab"
+            aria-selected={searchOpen}
+            aria-label="Search"
+            onClick={() => setSearchOpen(true)}
+            className={`flex flex-col items-center gap-0.5 px-4 py-2 transition active:scale-95 ${
+              searchOpen
+                ? "text-accent"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Search className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Search</span>
+          </button>
+
+          {/* Community */}
+          <button
+            role="tab"
+            aria-selected={false}
+            aria-label="Community"
+            onClick={() => navigate(isAdmin ? "/admin/community" : "/community")}
+            className="flex flex-col items-center gap-0.5 px-4 py-2 text-muted-foreground hover:text-foreground transition active:scale-95"
+          >
+            <Users className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Community</span>
+          </button>
+        </div>
+      </nav>
     </AdminContext.Provider>
   );
 };

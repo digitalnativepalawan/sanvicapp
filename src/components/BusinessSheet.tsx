@@ -101,7 +101,6 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
       setSaved(false);
     }
     setScrolled(false);
-    setDescExpanded(false);
   }, [business?.id]);
 
   const toggleSaved = () => {
@@ -200,13 +199,13 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent pointer-events-none" />
 
-              {/* Close button — always visible on hero */}
+              {/* Close button overlay — always visible on hero */}
               <button
                 onClick={() => onOpenChange(false)}
                 aria-label="Close"
-                className="absolute top-4 left-4 z-20 h-9 w-9 grid place-items-center rounded-full bg-background/60 backdrop-blur-md border border-foreground/10 text-foreground active:scale-95 transition"
+                className="absolute top-3 left-3 z-10 flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 text-foreground active:scale-95 transition shadow-lg"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
 
               {snapCount > 1 && (
@@ -328,17 +327,19 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
               {/* Description */}
               <section>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">About</h3>
-                <p className={`text-sm text-foreground/80 leading-relaxed ${descExpanded ? "" : "line-clamp-3"}`}>
-                  {d.description}
-                </p>
-                {d.description.length > 120 && (
-                  <button
-                    onClick={() => setDescExpanded((v) => !v)}
-                    className="text-xs text-accent font-medium mt-2"
-                  >
-                    {descExpanded ? "Show less" : "Read more"}
-                  </button>
-                )}
+                <div>
+                  <p className={`text-sm text-foreground/80 leading-relaxed ${descExpanded ? "" : "line-clamp-3"}`}>
+                    {d.description}
+                  </p>
+                  {d.description.length > 100 && (
+                    <button
+                      onClick={() => setDescExpanded(!descExpanded)}
+                      className="text-xs text-accent hover:underline mt-1.5 font-medium"
+                    >
+                      {descExpanded ? "Show less" : "Read more"}
+                    </button>
+                  )}
+                </div>
               </section>
 
               {/* Details grid */}
@@ -389,10 +390,18 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
                 </section>
               )}
 
-              {/* Map preview */}
+              {/* MINI MAP */}
               {hasCoords && (
-                <section>
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Location</h3>
+                <section className="mb-4">
+                  <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Location</h3>
+                  <button
+                    onClick={openInAppMap}
+                    className="w-full flex items-center justify-center gap-2 h-10 rounded-full bg-secondary/80 hover:bg-secondary border border-border/40 text-sm font-medium active:scale-[0.98] transition mb-2"
+                    aria-label="Open full map view"
+                  >
+                    <MapPin className="h-4 w-4" />
+                    View on Map
+                  </button>
                   <MiniMap
                     lat={business.latitude as number}
                     lng={business.longitude as number}

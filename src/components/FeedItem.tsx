@@ -54,7 +54,16 @@ export const FeedItem = ({ business, priority, featured, onOpen, onEdit }: Props
   return (
     <article
       onClick={() => onOpen?.(business)}
-      className={`relative w-full overflow-hidden cursor-pointer active:scale-[0.995] transition-transform duration-300 ${baseH}`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen?.(business);
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`View ${business.name}, ${business.category} in ${business.zone || 'San Vicente'}. ${business.whatsapp ? 'WhatsApp available' : ''}${business.phone ? ', Call available' : ''}`}
+      className={`relative w-full overflow-hidden cursor-pointer active:scale-[0.995] transition-transform duration-300 ${baseH} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`}
     >
       <img
         src={img}
@@ -121,9 +130,9 @@ export const FeedItem = ({ business, priority, featured, onOpen, onEdit }: Props
               href={`tel:${business.phone}`}
               onClick={(e) => e.stopPropagation()}
               aria-label={`Call ${business.name}`}
-              className="h-9 w-9 grid place-items-center rounded-full bg-background/40 backdrop-blur-md border border-foreground/15 text-foreground active:scale-95 transition"
+              className="h-11 w-11 grid place-items-center rounded-full bg-background/60 backdrop-blur-md border border-foreground/20 text-foreground hover:bg-background/80 active:scale-95 transition shadow-lg"
             >
-              <Phone className="h-4 w-4" />
+              <Phone className="h-5 w-5" />
             </a>
           )}
           {business.whatsapp && (
@@ -133,9 +142,9 @@ export const FeedItem = ({ business, priority, featured, onOpen, onEdit }: Props
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               aria-label={`WhatsApp ${business.name}`}
-              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-primary text-primary-foreground font-semibold text-[13px] active:scale-95 transition"
+              className="inline-flex items-center gap-1.5 h-11 px-4 rounded-full bg-primary text-primary-foreground font-semibold text-sm active:scale-95 transition shadow-lg shadow-primary/25"
             >
-              <MessageCircle className="h-4 w-4" strokeWidth={2.25} />
+              <MessageCircle className="h-5 w-5" strokeWidth={2.25} />
               <span>WhatsApp</span>
             </a>
           )}
