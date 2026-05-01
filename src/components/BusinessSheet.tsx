@@ -4,7 +4,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import { Drawer, DrawerContent, DrawerOverlay, DrawerPortal } from "@/components/ui/drawer";
 import {
   Phone, MessageCircle, MapPin, Wifi, Waves, Snowflake, UtensilsCrossed, Compass, Car, Ship,
-  Globe, Facebook, Instagram, Heart, Navigation, Check,
+  Globe, Facebook, Instagram, Heart, Navigation, Check, X,
 } from "lucide-react";
 import { pickStockImage } from "@/lib/stockImages";
 import type { Business } from "./FeedItem";
@@ -197,6 +197,15 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
                 <img src={gallery[0]} alt={business.name} className="absolute inset-0 h-full w-full object-cover" />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent pointer-events-none" />
+
+              {/* Close button overlay — always visible on hero */}
+              <button
+                onClick={() => onOpenChange(false)}
+                aria-label="Close"
+                className="absolute top-3 left-3 z-10 flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 text-foreground active:scale-95 transition shadow-lg"
+              >
+                <X className="h-5 w-5" />
+              </button>
 
               {snapCount > 1 && (
                 <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-1.5 pointer-events-none">
