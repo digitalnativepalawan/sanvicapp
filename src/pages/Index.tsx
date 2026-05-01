@@ -50,6 +50,11 @@ const Index = () => {
   const [searchResults, setSearchResults] = useState<Business[]>([]);
   const [searchCategory, setSearchCategory] = useState<string>("All");
   
+  // Geolocation state
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  
   // Pull-to-refresh state
   const pullDistanceRef = useRef(0);
   const isPullingRef = useRef(false);
@@ -246,7 +251,35 @@ const Index = () => {
     pullDistanceRef.current = 0;
   };
 
-  // Sort items based on sortBy
+  // Geolocation: Get user position and center map
+  const handleLocateMe = useCallback(async () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser");
+      return;
+    }
+    
+    setIsLocating(true);
+    setLocationError(null);
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation([latitude, longitude]);
+        setIsLocating(false);
+      },
+      (err) => {
+        let msg = "Unable to get your location";
+        if (err.code === 1) msg = "Location access denied. Please enable location permissions.";
+        if (err.code === 2) msg = "Position unavailable. Try again.";
+        if (err.code === 3) msg = "Location request timed out.";
+        setLocationError(msg);
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }, []);
+
+  // Sort: Featured items first
   const visible = (filter === "All" ? items : items.filter((b) => b.category === filter));
 
   const sortedVisible = [...visible].sort((a, b) => {
@@ -269,7 +302,7 @@ const Index = () => {
        <div className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-0 focus-visible:left-0 focus-visible:z-50 focus-visible:p-4 focus-visible:bg-background focus-visible:border focus-visible:rounded-b-lg">
          <a href="#main-content">Skip to main content</a>
        </div>
-       <main className="min-h-screen bg-background text-foreground" id="main-content">
+       <main className="min-h-screen bg-background text-foreground pb-20" id="main-content">
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
           <div className="px-4 sm:px-5 pt-4 pb-3">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -282,7 +315,7 @@ const Index = () => {
                 )}
               </h1>
               <div className="flex flex-wrap items-center justify-end gap-1.5 w-full sm:w-auto">
-                {/* Search Button */}
+                {/* Search Button — stays in header for quick access */}
                 <button
                   onClick={() => setSearchOpen(true)}
                   aria-label="Search"
@@ -292,21 +325,8 @@ const Index = () => {
                   Search
                 </button>
                 <button
-                  onClick={() => setView((v) => (v === "feed" ? "map" : "feed"))}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition whitespace-nowrap"
-                >
-                  {view === "feed" ? <MapIcon className="h-3.5 w-3.5" /> : <List className="h-3.5 w-3.5" />}
-                  {view === "feed" ? "Map" : "Feed"}
-                </button>
-                <button
-                  onClick={() => navigate(isAdmin ? "/admin/community" : "/community")}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-accent/15 text-accent hover:bg-accent/25 text-xs font-medium transition whitespace-nowrap"
-                >
-                  <Users className="h-3.5 w-3.5" />
-                  Community
-                </button>
-                <button
                   onClick={handleAdminToggle}
+                  aria-label={isAdmin ? "Exit admin mode" : "Admin mode"}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-secondary/70 text-muted-foreground hover:text-foreground text-xs font-medium transition whitespace-nowrap"
                 >
                   {isAdmin ? <LogOut className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
@@ -560,6 +580,75 @@ const Index = () => {
           onDelete={handleDeleted}
         />
       </main>
+
+      {/* Bottom navigation bar — native app feel, thumb-friendly */}
+      <nav
+        role="tablist"
+        aria-label="Main navigation"
+        className="fixed bottom-0 inset-x-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border/40 pb-safe pt-2"
+      >
+        <div className="flex items-center justify-around max-w-md mx-auto">
+          {/* Feed */}
+          <button
+            role="tab"
+            aria-selected={view === "feed" && !searchOpen}
+            aria-label="Feed view"
+            onClick={() => { setView("feed"); setSearchOpen(false); }}
+            className={`flex flex-col items-center gap-0.5 px-4 py-2 transition active:scale-95 ${
+              view === "feed" && !searchOpen
+                ? "text-accent"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <List className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Feed</span>
+          </button>
+
+          {/* Map */}
+          <button
+            role="tab"
+            aria-selected={view === "map"}
+            aria-label="Map view"
+            onClick={() => setView("map")}
+            className={`flex flex-col items-center gap-0.5 px-4 py-2 transition active:scale-95 ${
+              view === "map"
+                ? "text-accent"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <MapIcon className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Map</span>
+          </button>
+
+          {/* Search */}
+          <button
+            role="tab"
+            aria-selected={searchOpen}
+            aria-label="Search"
+            onClick={() => setSearchOpen(true)}
+            className={`flex flex-col items-center gap-0.5 px-4 py-2 transition active:scale-95 ${
+              searchOpen
+                ? "text-accent"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Search className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Search</span>
+          </button>
+
+          {/* Community */}
+          <button
+            role="tab"
+            aria-selected={false}
+            aria-label="Community"
+            onClick={() => navigate(isAdmin ? "/admin/community" : "/community")}
+            className="flex flex-col items-center gap-0.5 px-4 py-2 text-muted-foreground hover:text-foreground transition active:scale-95"
+          >
+            <Users className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Community</span>
+          </button>
+        </div>
+      </nav>
     </AdminContext.Provider>
   );
 };
