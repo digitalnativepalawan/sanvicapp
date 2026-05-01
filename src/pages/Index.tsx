@@ -257,7 +257,7 @@ const Index = () => {
         </Sheet>
 
         {view === "map" ? (
-          <MapView businesses={visible} onSelect={(b) => setActive(b)} />
+          <MapView businesses={visible} selectedId={active?.id || null} onSelect={(b) => setActive(b)} />
         ) : (
           <section className="flex flex-col gap-0.5 pb-10">
             {loading && (

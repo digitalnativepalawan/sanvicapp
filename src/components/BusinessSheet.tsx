@@ -368,10 +368,18 @@ export const BusinessSheet = ({ business, open, onOpenChange }: Props) => {
                 </section>
               )}
 
-              {/* Map preview */}
+              {/* MINI MAP */}
               {hasCoords && (
-                <section>
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Location</h3>
+                <section className="mb-4">
+                  <h3 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Location</h3>
+                  <button
+                    onClick={openInAppMap}
+                    className="w-full flex items-center justify-center gap-2 h-10 rounded-full bg-secondary/80 hover:bg-secondary border border-border/40 text-sm font-medium active:scale-[0.98] transition mb-2"
+                    aria-label="Open full map view"
+                  >
+                    <MapPin className="h-4 w-4" />
+                    View on Map
+                  </button>
                   <MiniMap
                     lat={business.latitude as number}
                     lng={business.longitude as number}
