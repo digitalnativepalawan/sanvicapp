@@ -12,6 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const CATEGORIES = ["All", "Eat", "Experience", "Stay", "Travel"] as const;
+const CATEGORY_EMOJI: Record<typeof CATEGORIES[number], string> = {
+  All: "🌴",
+  Eat: "🍽️",
+  Experience: "🏄",
+  Stay: "🏡",
+  Travel: "🚤",
+};
 type Cat = (typeof CATEGORIES)[number];
 
 const Index = () => {
@@ -359,26 +366,29 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Accessibility: live region for dynamic content changes */}
-          <div className="sr-only" aria-live="polite" aria-atomic="true" id="a11y-status" />
-
+          {/* Category filter pills — horizontal scroll, emoji icons */}
           <div className="px-5 pb-4">
-            <div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar -mx-1">
               {CATEGORIES.map((c) => (
                 <button
                   key={c}
                   onClick={() => setFilter(c)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition text-center ${
+                  aria-pressed={filter === c}
+                  className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition active:scale-95 ${
                     filter === c
                       ? "bg-foreground text-background"
                       : "bg-secondary text-muted-foreground hover:text-foreground"
                   }`}
                 >
+                  <span aria-hidden="true">{CATEGORY_EMOJI[c]}</span>
                   {c}
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Accessibility: live region for dynamic content changes */}
+          <div className="sr-only" aria-live="polite" aria-atomic="true" id="a11y-status" />
         </header>
 
         {/* Search Sheet */}
