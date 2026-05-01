@@ -29,6 +29,7 @@ const Index = () => {
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const initialLoadDoneRef = useRef(false);
   const [filter, setFilter] = useState<Cat>("All");
+  const [sortBy, setSortBy] = useState<"featured" | "newest" | "rating">("featured");
   const [active, setActive] = useState<Business | null>(null);
   const [editing, setEditing] = useState<Business | null>(null);
 
@@ -37,6 +38,12 @@ const Index = () => {
     setPage(1);
     setItems([]);
   }, [filter]);
+  
+  // Reset pagination when sort changes
+  useEffect(() => {
+    setPage(1);
+    setItems([]);
+  }, [sortBy]);
   const [view, setView] = useState<"feed" | "map">("feed");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,6 +93,21 @@ const Index = () => {
         .order("created_at", { ascending: false })
         .range((page - 1) * perPage, page * perPage - 1);
 
+      if (sortBy === "newest") {
+        query = supabase
+          .from("businesses")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .range((page - 1) * perPage, page * perPage - 1);
+      } else if (sortBy === "rating") {
+        query = supabase
+          .from("businesses")
+          .select("*")
+          .order("rating", { ascending: false })
+          .order("featured", { ascending: false })
+          .range((page - 1) * perPage, page * perPage - 1);
+      }
+
       if (!isAdmin) {
         query = query.eq("visible", true);
       }
@@ -111,7 +133,7 @@ const Index = () => {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, page]);
+  }, [isAdmin, page, sortBy]);
 
   useEffect(() => {
     document.title = "San Vicente Live — Eat, Stay, Explore";
@@ -278,6 +300,29 @@ const Index = () => {
                   {isAdmin ? "Exit" : "Admin"}
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Sort Options */}
+          <div className="px-5 pb-3 border-b border-border/30">
+            <div className="flex gap-2">
+              {[
+                { value: "featured", label: "Featured" },
+                { value: "newest", label: "Newest" },
+                { value: "rating", label: "Rating" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSortBy(option.value as any)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition whitespace-nowrap ${
+                    sortBy === option.value
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-secondary text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           </div>
 
