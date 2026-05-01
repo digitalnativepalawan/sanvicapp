@@ -438,12 +438,20 @@ const Index = () => {
             </div>
             
             <div className="overflow-y-auto h-[calc(85vh-140px)]">
+              {/* Search empty state */}
               {searchQuery && searchResults.length === 0 && (
-                <div className="text-center text-muted-foreground py-10">
-                  No results found for "{searchQuery}"
+                <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+                  <div className="text-5xl mb-3" aria-hidden="true">🔍</div>
+                  <h3 className="font-display text-lg font-semibold text-foreground mb-1.5">No matches found</h3>
+                  <p className="text-sm text-muted-foreground max-w-xs mb-4">
+                    We couldn't find anything matching "{searchQuery}". Try different keywords.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => { setSearchQuery(""); setSearchResults([]); }}>
+                    Clear search
+                  </Button>
                 </div>
               )}
-              
+
               {searchResults.map((business) => {
                 const thumb =
                   (business.images && business.images[0]) ||
@@ -556,19 +564,30 @@ const Index = () => {
               </div>
             )}
             {!loading && sortedVisible.length === 0 && !error && (
-              <div 
-                className="h-[60vh] flex flex-col items-center justify-center text-center px-6"
+              <div
+                className="min-h-[50vh] flex flex-col items-center justify-center text-center px-6"
                 aria-live="polite"
               >
-                <div className="w-16 h-16 rounded-full bg-secondary/50 grid place-items-center mb-4">
-                  <Search className="h-7 w-7 text-muted-foreground" />
+                <div className="text-6xl mb-4" aria-hidden="true">
+                  {filter !== "All" ? "🏝️" : "🌴"}
                 </div>
-                <h3 className="font-display text-lg font-semibold text-foreground mb-1.5">No listings found</h3>
-                <p className="text-sm text-muted-foreground max-w-xs">
+                <h3 className="font-display text-lg font-semibold text-foreground mb-1.5">
+                  {filter !== "All" ? `No ${filter} listings yet` : "No businesses yet"}
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-xs mb-5">
                   {filter !== "All"
-                    ? `No ${filter.toLowerCase()} businesses in this area yet.`
-                    : "No businesses have been added yet."}
+                    ? `There are no ${filter.toLowerCase()} businesses in San Vicente at the moment.`
+                    : "Be the first to add a business in San Vicente!"}
                 </p>
+                {filter !== "All" ? (
+                  <Button variant="outline" size="sm" onClick={() => setFilter("All")}>
+                    Show all listings
+                  </Button>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    Check back soon
+                  </div>
+                )}
               </div>
             )}
             {sortedVisible.map((b, i) => (
