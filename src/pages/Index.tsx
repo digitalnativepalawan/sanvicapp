@@ -310,7 +310,7 @@ const Index = () => {
        <div className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-0 focus-visible:left-0 focus-visible:z-50 focus-visible:p-4 focus-visible:bg-background focus-visible:border focus-visible:rounded-b-lg">
          <a href="#main-content">Skip to main content</a>
        </div>
-       <main className="min-h-screen bg-background text-foreground pb-20" id="main-content">
+       <main className="min-h-screen bg-background text-foreground pb-20 overflow-x-hidden" id="main-content">
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
           <div className="px-4 sm:px-5 pt-4 pb-3">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -639,8 +639,12 @@ const Index = () => {
             role="tab"
             aria-selected={view === "feed" && !searchOpen}
             aria-label="Feed view"
-            onClick={() => { setView("feed"); setSearchOpen(false); }}
-            className={`flex flex-col items-center gap-0.5 px-4 py-2 transition active:scale-95 ${
+            onClick={() => {
+              setView("feed");
+              setSearchOpen(false);
+              if (navigator.vibrate) navigator.vibrate(8);
+            }}
+            className={`flex flex-col items-center gap-0.5 px-4 py-2.5 transition active:scale-95 ${
               view === "feed" && !searchOpen
                 ? "text-accent"
                 : "text-muted-foreground hover:text-foreground"
@@ -655,8 +659,11 @@ const Index = () => {
             role="tab"
             aria-selected={view === "map"}
             aria-label="Map view"
-            onClick={() => setView("map")}
-            className={`flex flex-col items-center gap-0.5 px-4 py-2 transition active:scale-95 ${
+            onClick={() => {
+              setView("map");
+              if (navigator.vibrate) navigator.vibrate(8);
+            }}
+            className={`flex flex-col items-center gap-0.5 px-4 py-2.5 transition active:scale-95 ${
               view === "map"
                 ? "text-accent"
                 : "text-muted-foreground hover:text-foreground"
@@ -671,8 +678,11 @@ const Index = () => {
             role="tab"
             aria-selected={searchOpen}
             aria-label="Search"
-            onClick={() => setSearchOpen(true)}
-            className={`flex flex-col items-center gap-0.5 px-4 py-2 transition active:scale-95 ${
+            onClick={() => {
+              setSearchOpen(true);
+              if (navigator.vibrate) navigator.vibrate(8);
+            }}
+            className={`flex flex-col items-center gap-0.5 px-4 py-2.5 transition active:scale-95 ${
               searchOpen
                 ? "text-accent"
                 : "text-muted-foreground hover:text-foreground"
@@ -687,8 +697,11 @@ const Index = () => {
             role="tab"
             aria-selected={false}
             aria-label="Community"
-            onClick={() => navigate(isAdmin ? "/admin/community" : "/community")}
-            className="flex flex-col items-center gap-0.5 px-4 py-2 text-muted-foreground hover:text-foreground transition active:scale-95"
+            onClick={() => {
+              navigate(isAdmin ? "/admin/community" : "/community");
+              if (navigator.vibrate) navigator.vibrate(8);
+            }}
+            className="flex flex-col items-center gap-0.5 px-4 py-2.5 text-muted-foreground hover:text-foreground transition active:scale-95"
           >
             <Users className="h-5 w-5" />
             <span className="text-[10px] font-medium">Community</span>

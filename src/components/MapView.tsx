@@ -37,14 +37,33 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
     selectedIdRef.current = selectedId;
   }, [businesses, onSelect, selectedId]);
 
+  // Initialize map on mount and when container becomes visible
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    mapRef.current = L.map(containerRef.current, {
+
+    const map = L.map(containerRef.current, {
       zoomControl: false,
       attributionControl: false,
       doubleClickZoom: false,
+      // Ensure map fills container
+      preferCanvas: true,
     }).setView([10.55, 118.95], 12);
-    L.control.zoom({ position: "topright" }).addTo(mapRef.current);
+
+    L.control.zoom({ position: "topright" }).addTo(map);
+    mapRef.current = map;
+
+    // Invalidate size after mount to ensure proper rendering
+    const timeout = setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
+    return () => {
+      clearTimeout(timeout);
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -193,8 +212,8 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
   }, [businesses, selectedId]);
 
   return (
-    <div className="relative h-[calc(100vh-110px)] w-full bg-secondary">
-      <div ref={containerRef} className="absolute inset-0" />
+    <div className="relative h-[calc(100vh-110px)] w-full bg-secondary z-0">
+      <div ref={containerRef} className="absolute inset-0 z-0" />
       <button
         onClick={() => {
           viewRef.current = viewRef.current === "satellite" ? "standard" : "satellite";
@@ -203,7 +222,7 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
             tileRef.current = L.tileLayer(TILE_URLS[viewRef.current], { maxZoom: 19 }).addTo(mapRef.current);
           }
         }}
-        className="absolute top-4 right-14 z-[1000] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-border/40 text-xs font-medium shadow-sm active:scale-95 transition"
+        className="absolute top-4 right-4 z-[1000] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/90 backdrop-blur-md border border-border/40 text-xs font-medium shadow-lg active:scale-95 transition"
       >
         {viewRef.current === "satellite" ? "🛰️ Satellite" : "🗺️ Standard"}
       </button>

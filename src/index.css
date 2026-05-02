@@ -120,9 +120,13 @@
     @apply border-border;
   }
 
+  html, body {
+    @apply overflow-x-hidden;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: Inter, system-ui, sans-serif;
     overscroll-behavior-y: contain;
     overflow-x: hidden;
   }
