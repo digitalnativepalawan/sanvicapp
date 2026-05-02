@@ -52,31 +52,41 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
       return;
     }
 
+    // Guard: Leaflet must be loaded
+    if (typeof L === "undefined") {
+      console.error("[MapView] Leaflet (L) is not defined — map library failed to load");
+      return;
+    }
+
     console.log("[MapView] initializing Leaflet map...");
-    const map = L.map(containerRef.current, {
-      zoomControl: false,
-      attributionControl: false,
-      doubleClickZoom: false,
-      preferCanvas: true,
-    }).setView([10.55, 118.95], 12);
+    try {
+      const map = L.map(containerRef.current, {
+        zoomControl: false,
+        attributionControl: false,
+        doubleClickZoom: false,
+        preferCanvas: true,
+      }).setView([10.55, 118.95], 12);
 
-    L.control.zoom({ position: "topright" }).addTo(map);
-    mapRef.current = map;
+      L.control.zoom({ position: "topright" }).addTo(map);
+      mapRef.current = map;
 
-    // Invalidate size after mount to ensure proper rendering
-    const timeout = setTimeout(() => {
-      console.log("[MapView] invalidating size");
-      map.invalidateSize();
-    }, 150);
+      // Invalidate size after mount to ensure proper rendering
+      const timeout = setTimeout(() => {
+        console.log("[MapView] invalidating size");
+        map.invalidateSize();
+      }, 150);
 
-    return () => {
-      clearTimeout(timeout);
-      if (mapRef.current) {
-        console.log("[MapView] cleaning up map");
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
+      return () => {
+        clearTimeout(timeout);
+        if (mapRef.current) {
+          console.log("[MapView] cleaning up map");
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
+      };
+    } catch (err) {
+      console.error("[MapView] Leaflet init error:", err);
+    }
   }, []);
 
   useEffect(() => {
