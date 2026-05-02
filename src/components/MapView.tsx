@@ -30,6 +30,7 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
   const businessesRef = useRef<Business[]>(businesses);
   const onSelectRef = useRef(onSelect);
   const selectedIdRef = useRef(selectedId);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     businessesRef.current = businesses;
@@ -44,7 +45,9 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
 
   useEffect(() => {
     if (!containerRef.current) {
-      console.error("[MapView] containerRef.current is null — cannot initialize map");
+      const msg = "[MapView] containerRef.current is null — cannot initialize map";
+      console.error(msg);
+      setError(msg);
       return;
     }
     if (mapRef.current) {
@@ -54,7 +57,9 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
 
     // Guard: Leaflet must be loaded
     if (typeof L === "undefined") {
-      console.error("[MapView] Leaflet (L) is not defined — map library failed to load");
+      const msg = "[MapView] Leaflet (L) is not defined — map library failed to load";
+      console.error(msg);
+      setError(msg);
       return;
     }
 
@@ -69,6 +74,9 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
 
       L.control.zoom({ position: "topright" }).addTo(map);
       mapRef.current = map;
+
+      // Clear any previous error
+      setError(null);
 
       // Invalidate size after mount to ensure proper rendering
       const timeout = setTimeout(() => {
@@ -85,7 +93,9 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
         }
       };
     } catch (err) {
-      console.error("[MapView] Leaflet init error:", err);
+      const msg = "[MapView] Leaflet init error: " + (err instanceof Error ? err.message : String(err));
+      console.error(msg, err);
+      setError(msg);
     }
   }, []);
 
@@ -237,7 +247,21 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
   return (
     <div className="relative flex-1 w-full bg-secondary z-0 min-h-0">
       <div ref={containerRef} className="absolute inset-0 z-0" />
-      {businesses.filter(b => b.latitude && b.longitude).length === 0 && (
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center text-destructive text-sm px-6 text-center bg-background/95 z-10">
+          <div>
+            <p className="font-semibold mb-1">Map Error</p>
+            <p>{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 px-3 py-1.5 rounded-full bg-accent text-accent-foreground text-xs font-medium"
+            >
+              Reload page
+            </button>
+          </div>
+        </div>
+      )}
+      {businesses.filter(b => b.latitude && b.longitude).length === 0 && !error && (
         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm px-6 text-center">
           No businesses with location data yet.
         </div>
