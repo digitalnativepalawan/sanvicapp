@@ -43,6 +43,25 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
     console.log("[MapView] render", { businessCount: businesses.length, validCount: businesses.filter(b => b.latitude && b.longitude).length, selectedId, container: !!containerRef.current });
   }, [businesses, selectedId]);
 
+  // Invalidate map size when container becomes visible/sized
+  useEffect(() => {
+    if (!containerRef.current || !mapRef.current) return;
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+          console.log("[MapView] container resized → invalidating size");
+          mapRef.current?.invalidateSize();
+          ro.disconnect();
+          break;
+        }
+      }
+    });
+
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [mapRef.current]);
+
   useEffect(() => {
     if (!containerRef.current) {
       const msg = "[MapView] containerRef.current is null — cannot initialize map";
