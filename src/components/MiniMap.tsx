@@ -31,27 +31,37 @@ export const MiniMap = ({ lat, lng, label, onClick }: MiniMapProps) => {
     ).addTo(map);
     L.marker([lat, lng]).addTo(map);
     mapRef.current = map;
-    setTimeout(() => map.invalidateSize(), 100);
+    const timers = [50, 200, 500, 900].map((t) =>
+      setTimeout(() => map.invalidateSize(), t),
+    );
     return () => {
+      timers.forEach(clearTimeout);
       map.remove();
       mapRef.current = null;
     };
   }, [lat, lng]);
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="relative block w-full h-40 rounded-2xl overflow-hidden bg-secondary active:scale-[0.99] transition text-left"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+      className="relative block w-full h-44 rounded-2xl overflow-hidden bg-secondary active:scale-[0.99] transition text-left cursor-pointer"
     >
-      <div ref={ref} className="absolute inset-0" />
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-background/70 to-transparent" />
-      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+      <div ref={ref} className="absolute inset-0 z-0" />
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-background/70 to-transparent z-[1]" />
+      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none z-[2]">
         {label && <span className="text-sm text-foreground truncate">{label}</span>}
         <span className="ml-auto text-[11px] px-2.5 py-1 rounded-full bg-foreground text-background font-semibold">
           Open map
         </span>
       </div>
-    </button>
+    </div>
   );
 };
