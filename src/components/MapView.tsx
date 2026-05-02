@@ -37,15 +37,26 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
     selectedIdRef.current = selectedId;
   }, [businesses, onSelect, selectedId]);
 
-  // Initialize map on mount and when container becomes visible
+  // Debug: log mount and businesses
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    console.log("[MapView] render", { businessCount: businesses.length, validCount: businesses.filter(b => b.latitude && b.longitude).length, selectedId, container: !!containerRef.current });
+  }, [businesses, selectedId]);
 
+  useEffect(() => {
+    if (!containerRef.current) {
+      console.error("[MapView] containerRef.current is null — cannot initialize map");
+      return;
+    }
+    if (mapRef.current) {
+      console.log("[MapView] map already initialized, skipping");
+      return;
+    }
+
+    console.log("[MapView] initializing Leaflet map...");
     const map = L.map(containerRef.current, {
       zoomControl: false,
       attributionControl: false,
       doubleClickZoom: false,
-      // Ensure map fills container
       preferCanvas: true,
     }).setView([10.55, 118.95], 12);
 
@@ -54,12 +65,14 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
 
     // Invalidate size after mount to ensure proper rendering
     const timeout = setTimeout(() => {
+      console.log("[MapView] invalidating size");
       map.invalidateSize();
-    }, 100);
+    }, 150);
 
     return () => {
       clearTimeout(timeout);
       if (mapRef.current) {
+        console.log("[MapView] cleaning up map");
         mapRef.current.remove();
         mapRef.current = null;
       }
@@ -212,8 +225,13 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
   }, [businesses, selectedId]);
 
   return (
-    <div className="relative h-[calc(100vh-110px)] w-full bg-secondary z-0">
+    <div className="relative flex-1 w-full bg-secondary z-0 min-h-0">
       <div ref={containerRef} className="absolute inset-0 z-0" />
+      {businesses.filter(b => b.latitude && b.longitude).length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm px-6 text-center">
+          No businesses with location data yet.
+        </div>
+      )}
       <button
         onClick={() => {
           viewRef.current = viewRef.current === "satellite" ? "standard" : "satellite";

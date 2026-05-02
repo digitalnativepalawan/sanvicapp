@@ -310,7 +310,7 @@ const Index = () => {
        <div className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-0 focus-visible:left-0 focus-visible:z-50 focus-visible:p-4 focus-visible:bg-background focus-visible:border focus-visible:rounded-b-lg">
          <a href="#main-content">Skip to main content</a>
        </div>
-       <main className="min-h-screen bg-background text-foreground pb-20 overflow-x-hidden" id="main-content">
+       <main className="min-h-screen bg-background text-foreground pb-20 overflow-x-hidden flex flex-col" id="main-content">
         <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/60 border-b border-border/40">
           <div className="px-4 sm:px-5 pt-4 pb-3">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
