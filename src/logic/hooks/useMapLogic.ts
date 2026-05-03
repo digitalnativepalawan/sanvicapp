@@ -55,7 +55,13 @@ export const useMapLogic = ({
 
   // Initialize map
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    if (!containerRef.current) return;
+
+    // Remove any existing map on this container
+    if (L.DomUtil.get(containerRef.current)) {
+      const existingMap = L.DomUtil.get(containerRef.current) as L.Map;
+      existingMap.remove();
+    }
 
     try {
       const map = L.map(containerRef.current, {
