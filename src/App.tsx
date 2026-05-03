@@ -1,15 +1,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
-import Auth from "./pages/Auth.tsx";
-import Community from "./pages/community/Community.tsx";
-import { Games, Leaderboard, Blog } from "./pages/community/Stub.tsx";
-import AdminCommunity from "./pages/admin/AdminCommunity.tsx";
-import { AuthProvider } from "./contexts/AuthContext";
+import { Toaster as Sonner } from "@/ui/components/ui/sonner";
+import { Toaster } from "@/ui/components/ui/toaster";
+import { TooltipProvider } from "@/ui/components/ui/tooltip";
+import Index from "./ui/pages/Index.tsx";
+import NotFound from "./ui/pages/NotFound.tsx";
+import Auth from "./ui/pages/Auth.tsx";
+import Community from "./ui/pages/community/Community.tsx";
+import { Games, Leaderboard, Blog } from "./ui/pages/community/Stub.tsx";
+import AdminCommunity from "./ui/pages/admin/AdminCommunity.tsx";
+import { AuthProvider } from "./logic/contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
