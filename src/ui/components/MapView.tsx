@@ -1,271 +1,85 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import type { Business } from "./FeedItem";
+import { useMapLogic } from "@/logic/hooks/useMapLogic";
 
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+interface MapViewProps {
+  businesses: Business[];
+  selectedId: string | null;
+  onSelect: (business: Business) => void;
+  initialCenter?: [number, number];
+  initialZoom?: number;
+  className?: string;
+}
 
 const TILE_URLS = {
   standard: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
   satellite: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
 };
 
-interface MapViewProps {
-  businesses: Business[];
-  selectedId: string | null;
-  onSelect: (b: Business) => void;
-}
+export const MapView = ({
+  businesses,
+  selectedId,
+  onSelect,
+  initialCenter,
+  initialZoom,
+  className = "",
+}: MapViewProps) => {
+  const {
+    map,
+    bounds,
+    selectedBusiness,
+    isLoading,
+    error,
+    containerRef,
+    setSelectedBusiness,
+    fitBounds,
+  } = useMapLogic({
+    businesses,
+    selectedId,
+    onSelect,
+    initialCenter,
+    initialZoom,
+  });
 
-export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
-  const mapRef = useRef<L.Map | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const tileRef = useRef<L.TileLayer | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
-  const viewRef = useRef<"standard" | "satellite">("satellite");
-  const businessesRef = useRef<Business[]>(businesses);
-  const onSelectRef = useRef(onSelect);
-  const selectedIdRef = useRef(selectedId);
-  const [error, setError] = useState<string | null>(null);
-
+  // Handle tile layer switching (could be moved to hook if needed)
   useEffect(() => {
-    businessesRef.current = businesses;
-    onSelectRef.current = onSelect;
-    selectedIdRef.current = selectedId;
-  }, [businesses, onSelect, selectedId]);
+    if (!map) return;
 
-  // Debug: log mount and businesses
+    const tileLayer = L.tileLayer(TILE_URLS.satellite, { maxZoom: 19 });
+    tileLayer.addTo(map);
+
+    return () => {
+      map.removeLayer(tileLayer);
+    };
+  }, [map]);
+
+  // Fit bounds when businesses change
   useEffect(() => {
-    console.log("[MapView] render", { businessCount: businesses.length, validCount: businesses.filter(b => b.latitude && b.longitude).length, selectedId, container: !!containerRef.current });
-  }, [businesses, selectedId]);
+    if (!map || businesses.length === 0) return;
 
-  // Invalidate map size when container becomes visible/sized
-  useEffect(() => {
-    if (!containerRef.current || !mapRef.current) return;
+    const validBusinesses = businesses.filter(b => b.latitude && b.longitude);
+    if (validBusinesses.length === 0) return;
 
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-          console.log("[MapView] container resized → invalidating size");
-          mapRef.current?.invalidateSize();
-          ro.disconnect();
-          break;
-        }
-      }
-    });
-
-    ro.observe(containerRef.current);
-    return () => ro.disconnect();
-  }, [mapRef.current]);
-
-  useEffect(() => {
-    if (!containerRef.current) {
-      const msg = "[MapView] containerRef.current is null — cannot initialize map";
-      console.error(msg);
-      setError(msg);
-      return;
-    }
-    if (mapRef.current) {
-      console.log("[MapView] map already initialized, skipping");
-      return;
-    }
-
-    // Guard: Leaflet must be loaded
-    if (typeof L === "undefined") {
-      const msg = "[MapView] Leaflet (L) is not defined — map library failed to load";
-      console.error(msg);
-      setError(msg);
-      return;
-    }
-
-    console.log("[MapView] initializing Leaflet map...");
-    try {
-      const map = L.map(containerRef.current, {
-        zoomControl: false,
-        attributionControl: false,
-        doubleClickZoom: false,
-        preferCanvas: true,
-      }).setView([10.55, 118.95], 12);
-
-      L.control.zoom({ position: "topright" }).addTo(map);
-      mapRef.current = map;
-
-      // Clear any previous error
-      setError(null);
-
-      // Invalidate size after mount to ensure proper rendering
-      const timeout = setTimeout(() => {
-        console.log("[MapView] invalidating size");
-        map.invalidateSize();
-      }, 150);
-
-      return () => {
-        clearTimeout(timeout);
-        if (mapRef.current) {
-          console.log("[MapView] cleaning up map");
-          mapRef.current.remove();
-          mapRef.current = null;
-        }
-      };
-    } catch (err) {
-      const msg = "[MapView] Leaflet init error: " + (err instanceof Error ? err.message : String(err));
-      console.error(msg, err);
-      setError(msg);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!mapRef.current) return;
-    if (tileRef.current) mapRef.current.removeLayer(tileRef.current);
-    tileRef.current = L.tileLayer(TILE_URLS[viewRef.current], { maxZoom: 19 }).addTo(mapRef.current);
-  }, [viewRef.current]);
-
-  useEffect(() => {
-    if (!mapRef.current) return;
-    
-    markersRef.current.forEach((m) => mapRef.current!.removeLayer(m));
-    markersRef.current = [];
-
-    const valid = businesses.filter((b) => b.latitude && b.longitude);
-    if (valid.length === 0) return;
-
-    const group = L.featureGroup();
-
-    valid.forEach((b) => {
-      const isSelected = b.id === selectedIdRef.current;
-
-      // Custom icon for selected business (green checkmark pin)
-      const iconHtml = isSelected
-        ? `<div style="
-            width: 32px;
-            height: 40px;
-            background: linear-gradient(135deg, hsl(142, 70%, 49%) 0%, hsl(142, 70%, 35%) 100%);
-            border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg);
-            border: 2px solid white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">
-            <div style="transform: rotate(45deg); color: white; font-weight: bold; font-size: 16px;">✓</div>
-          </div>`
-        : undefined;
-
-      const icon = iconHtml
-        ? L.divIcon({
-            html: iconHtml,
-            className: 'custom-marker',
-            iconSize: isSelected ? [32, 40] : [25, 40],
-            iconAnchor: isSelected ? [16, 40] : [12, 40],
-            popupAnchor: [0, -40],
-          })
-        : undefined;
-
-      const marker = L.marker([b.latitude!, b.longitude!], icon ? { icon } : undefined);
-
-      const description = b.category === "Stay"
-        ? `Comfortable ${b.zone || "San Vicente"} stay, ideal for slow island days.`
-        : b.category === "Eat"
-        ? `Local favorite serving fresh ${b.zone?.toLowerCase().includes("beach") ? "seafood" : "Filipino dishes"}.`
-        : b.category === "Experience"
-        ? `Curated ${b.tag || "island"} experience with trusted local guides.`
-        : `Reliable transport service across ${b.zone || "San Vicente"}.`;
-
-      const popupId = `popup-${b.id}`;
-
-      const popupHtml = `
-        <div id="${popupId}" style="font-family: Inter, system-ui, sans-serif; min-width: 200px; text-align: left; background: #0a0d14; color: #f0f4f8; padding: 12px; border-radius: 8px; ${isSelected ? 'border: 2px solid hsl(142, 70%, 49%);' : ''}">
-          <h3 style="font-weight: 700; margin: 0 0 4px; font-size: 15px; color: #f0f4f8;">${b.name}</h3>
-          <p style="margin: 0 0 8px; font-size: 11px; color: #8899a6; text-transform: uppercase; letter-spacing: 0.05em;">
-            ${b.zone || "San Vicente"} · ${b.category}
-          </p>
-          <p style="margin: 0 0 12px; font-size: 13px; color: #b8c5d0; line-height: 1.4;">
-            ${description}
-          </p>
-          <div style="display: flex; flex-direction: column; gap: 10px;">
-            ${b.whatsapp ? `
-              <a
-                href="https://wa.me/${b.whatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hi ${b.name}! I found you on San Vicente Live.`)}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="map-popup-whatsapp-btn"
-                data-business-id="${b.id}"
-                style="width: 100%; padding: 14px; border-radius: 9999px; background: #25D366; color: #fff; font-weight: 600; font-size: 15px; border: none; cursor: pointer; text-align: center; text-decoration: none; display: block; box-shadow: 0 6px 16px rgba(37, 211, 102, 0.35);"
-              >
-                💬 WhatsApp Now
-              </a>
-            ` : ''}
-            ${b.phone ? `
-              <a
-                href="tel:${b.phone}"
-                class="map-popup-call-btn"
-                data-business-id="${b.id}"
-                style="width: 100%; padding: 14px; border-radius: 9999px; background: #2563eb; color: #fff; font-weight: 600; font-size: 15px; border: none; cursor: pointer; text-align: center; text-decoration: none; display: block; box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);"
-              >
-                📞 Call Now
-              </a>
-            ` : ''}
-            <button
-              class="map-view-details-btn"
-              data-business-id="${b.id}"
-              style="width: 100%; padding: 12px; border-radius: 9999px; background: #0ea5e9; color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer;"
-            >
-              View full details
-            </button>
-          </div>
-        </div>
-      `;
-
-      marker.bindPopup(popupHtml, { closeButton: false, maxWidth: 240 });
-      marker.on("popupopen", (e) => {
-        const node = (e.popup.getElement() as HTMLElement | null);
-        const btn = node?.querySelector(".map-view-details-btn") as HTMLButtonElement | null;
-        if (!btn) return;
-        const handler = (ev: Event) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          const id = btn.getAttribute("data-business-id");
-          const biz = businessesRef.current.find((x) => x.id === id);
-          if (biz) {
-            mapRef.current?.closePopup();
-            onSelectRef.current(biz);
-          }
-        };
-        btn.addEventListener("click", handler);
-        btn.addEventListener("touchend", handler);
-      });
-      marker.addTo(group);
-      markersRef.current.push(marker);
-    });
-
-    group.addTo(mapRef.current);
-
-    // If a business is selected, zoom to it and open its popup
-    if (selectedIdRef.current) {
-      const selectedBiz = valid.find(b => b.id === selectedIdRef.current);
-      if (selectedBiz) {
-        mapRef.current.setView([selectedBiz.latitude!, selectedBiz.longitude!], 16);
-        setTimeout(() => {
-          const selectedMarker = markersRef.current.find(m => {
-            const latlng = m.getLatLng();
-            return latlng.lat === selectedBiz.latitude && latlng.lng === selectedBiz.longitude;
-          });
-          selectedMarker?.openPopup();
-        }, 300);
-      }
-    } else {
-      mapRef.current.fitBounds(group.getBounds().pad(0.25), { animate: true });
-    }
-  }, [businesses, selectedId]);
+    const group = L.featureGroup(validBusinesses.map(b => L.marker([b.latitude!, b.longitude!])));
+    fitBounds(group.getBounds().pad(0.25));
+  }, [businesses, map, fitBounds]);
 
   return (
-    <div className="relative flex-1 w-full bg-secondary z-0 min-h-0">
+    <div className={`relative flex-1 w-full bg-secondary z-0 min-h-0 ${className}`}>
       <div ref={containerRef} className="absolute inset-0 z-0" />
+
+      {/* Loading state */}
+      {isLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+            <span>Loading map...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error state */}
       {error && (
         <div className="absolute inset-0 flex items-center justify-center text-destructive text-sm px-6 text-center bg-background/95 z-10">
           <div>
@@ -280,23 +94,77 @@ export const MapView = ({ businesses, selectedId, onSelect }: MapViewProps) => {
           </div>
         </div>
       )}
-      {businesses.filter(b => b.latitude && b.longitude).length === 0 && !error && (
+
+      {/* No businesses message */}
+      {!isLoading && !error && businesses.filter(b => b.latitude && b.longitude).length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm px-6 text-center">
           No businesses with location data yet.
         </div>
       )}
-      <button
-        onClick={() => {
-          viewRef.current = viewRef.current === "satellite" ? "standard" : "satellite";
-          if (mapRef.current && tileRef.current) {
-            mapRef.current.removeLayer(tileRef.current);
-            tileRef.current = L.tileLayer(TILE_URLS[viewRef.current], { maxZoom: 19 }).addTo(mapRef.current);
-          }
-        }}
-        className="absolute top-4 right-4 z-[1000] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/90 backdrop-blur-md border border-border/40 text-xs font-medium shadow-lg active:scale-95 transition"
-      >
-        {viewRef.current === "satellite" ? "🛰️ Satellite" : "🗺️ Standard"}
-      </button>
+
+      {/* Map controls overlay */}
+      {map && (
+        <div className="absolute top-4 right-16 z-[1000] flex gap-2">
+          <button
+            onClick={() => {
+              // Toggle tile layer (basic implementation)
+              // In a full implementation, this would be in the hook
+              const currentLayer = map.getContainer().querySelector('.leaflet-tile-pane img')?.src.includes('satellite');
+              const newUrl = currentLayer ? TILE_URLS.standard : TILE_URLS.satellite;
+              const tileLayer = L.tileLayer(newUrl, { maxZoom: 19 });
+              map.eachLayer((layer) => {
+                if (layer instanceof L.TileLayer) {
+                  map.removeLayer(layer);
+                }
+              });
+              tileLayer.addTo(map);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/90 backdrop-blur-md border border-border/40 text-xs font-medium shadow-lg active:scale-95 transition"
+          >
+            🌐 Toggle View
+          </button>
+        </div>
+      )}
+
+      {/* Selected business info card (optional overlay) */}
+      {selectedBusiness && (
+        <div className="absolute bottom-4 left-4 right-4 z-[1000] bg-background/95 backdrop-blur-md rounded-lg border border-border/40 p-4 shadow-lg max-w-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-foreground truncate">{selectedBusiness.name}</h3>
+              <p className="text-sm text-muted-foreground">
+                {selectedBusiness.zone || "San Vicente"} · {selectedBusiness.category}
+              </p>
+              <div className="flex gap-2 mt-2">
+                {selectedBusiness.whatsapp && (
+                  <a
+                    href={`https://wa.me/${selectedBusiness.whatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hi ${selectedBusiness.name}! I found you on San Vicente Live.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 bg-green-600 text-white rounded-md text-xs font-medium hover:bg-green-700 transition"
+                  >
+                    WhatsApp
+                  </a>
+                )}
+                {selectedBusiness.phone && (
+                  <a
+                    href={`tel:${selectedBusiness.phone}`}
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 transition"
+                  >
+                    Call
+                  </a>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedBusiness(null)}
+              className="text-muted-foreground hover:text-foreground p-1"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
